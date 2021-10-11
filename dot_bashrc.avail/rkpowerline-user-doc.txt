@@ -1,0 +1,6 @@
+<<<<<<< HEAD
+# documentation for user nkabir generated on 20210202140708
+=======
+# documentation for user nkabir generated on 20210201162330
+>>>>>>> updating glassware
+# generated into $HOME/.bashrc.avail/
