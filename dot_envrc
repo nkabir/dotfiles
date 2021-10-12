@@ -1,0 +1,40 @@
+# user settings
+export readonly RKDIRENV_USER_EMAIL="nkabir@gmail.com"
+export readonly RKDIRENV_USER_FULLNAME="Norman Kabir"
+
+# svc accounts
+export readonly RKDIRENV_SVC_BITBUCKET="nkabir"
+export readonly RKDIRENV_SVC_GITHUB="nkabir"
+export readonly RKDIRENV_SVC_GITLAB="nkabir"
+
+export readonly GITHUB_USER="${GITHUB_USER:?}"
+
+export readonly PYTHON_GITLAB_CFG="$HOME/.secret/gitlab/python-gitlab.cfg"
+
+
+# gam accounts
+export readonly RKDIRENV_GAM_EXAMPLE_COM="nkabir@example.com"
+export readonly RKDIRENV_GAM_ROCKETKNOWLEDGE_COM="nkabir@rocketknowledge.com"
+
+export readonly RKX_APTLY_SERVER=10.1.200.100
+
+# host assigned to user for development
+# change this per user
+export USER_HOST="h-lpc-0" 
+
+if [[ -e "${HOME}/labkey" ]]; then
+  export RKX_DA_MOUNT=${HOME:?}/.local
+  export RKX_DA_OPT="${RKX_DA_MOUNT:?}/opt"
+  export PACKAGES_PATH="${RKX_DA_MOUNT}/etc"
+  export USER_MODE=development
+  source $HOME/.secret/shared.sh
+
+  for complete in ~/.local/etc/bash_completion.d/*.complete ; do
+    source "${complete}"
+  done
+fi
+
+
+# query if we are on development host
+#[[ "$(hostname)" = "${USER_HOST}" ]] && {
+#}
