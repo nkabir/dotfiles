@@ -2,7 +2,7 @@
 {{- if eq .chezmoi.osRelease.id "ubuntu" -}}
 {{- if eq .chezmoi.osRelease.versionCodename "noble" -}}
 
-{{- template "../bash/noble.bashrc.tmpl" . -}}
+{{- template ".chezmoitemplates/noble.bashrc.tmpl" . -}}
 {{ end }}
 {{ end }}
 {{- else -}}
