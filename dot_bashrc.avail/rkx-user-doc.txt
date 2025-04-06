@@ -1,2 +1,0 @@
-# documentation for user nkabir generated on 20210204155223
-# generated into $HOME/.bashrc.avail/

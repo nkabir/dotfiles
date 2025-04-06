@@ -2,7 +2,6 @@
 # see /usr/share/doc/bash/examples/startup-files (in the package bash-doc)
 # for examples
 
-
 # If not running interactively, don't do anything
 case $- in
     *i*) ;;
@@ -75,7 +74,7 @@ esac
 
 # enable color support of ls and also add handy aliases
 if [ -x /usr/bin/dircolors ]; then
-#    test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
+    test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
     alias ls='ls --color=auto'
     #alias dir='dir --color=auto'
     #alias vdir='vdir --color=auto'
@@ -117,19 +116,4 @@ if ! shopt -oq posix; then
   fi
 fi
 
-# :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-# Modifications
-
-export GPG_TTY=$(tty)
-export LABKEY_DA="${HOME:?}/labkey"
-export GITHUB_USER="nkabir"
-
-# RKX_BEG
-# :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-# load bashrc extensions
-for bashrc in ${HOME}/.bashrc.d/*.bashrc ; do
-    source "${bashrc}"
-    # echo ${bashrc}
-done
-# :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-# RKX_END
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
