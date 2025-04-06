@@ -1,0 +1,6 @@
+{{- range $name, $opts := .bashrc_snippets }}
+{{- if $opts.enabled }}
+!{{ $name }}
+{{- end }}
+{{- end }}
+
