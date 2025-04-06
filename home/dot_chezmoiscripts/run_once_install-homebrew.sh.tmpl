@@ -1,0 +1,105 @@
+#!/bin/bash
+# .chezmoiscripts/run_once_install-homebrew.sh.tmpl
+
+{{ if ne .chezmoi.os "darwin" "linux" -}}
+echo "Unsupported OS: {{ .chezmoi.os }}"
+exit 1
+{{ end -}}
+
+# Detect the operating system
+is_macos() {
+  [[ "{{ .chezmoi.os }}" == "darwin" ]]
+}
+
+is_linux() {
+  [[ "{{ .chezmoi.os }}" == "linux" ]]
+}
+
+# Detect the Linux distribution
+is_ubuntu() {
+  if is_linux && command -v lsb_release >/dev/null 2>&1; then
+    [[ "$(lsb_release -is)" == "Ubuntu" ]]
+  else
+    false
+  fi
+}
+
+is_alma() {
+  if is_linux && [ -f /etc/redhat-release ]; then
+    grep -q "AlmaLinux" /etc/redhat-release
+  else
+    false
+  fi
+}
+
+# Install dependencies
+install_dependencies() {
+  echo "Installing dependencies for Homebrew..."
+  
+  if is_ubuntu; then
+    sudo apt-get update
+    sudo apt-get install -y build-essential procps curl file git
+  elif is_alma; then
+    sudo dnf groupinstall -y 'Development Tools'
+    sudo dnf install -y procps-ng curl file git
+  elif is_macos; then
+    # Check if Xcode Command Line Tools are installed
+    if ! xcode-select -p &>/dev/null; then
+      echo "Installing Xcode Command Line Tools..."
+      xcode-select --install
+      # Wait for the installation to complete
+      echo "Please complete the Xcode Command Line Tools installation and then press any key to continue..."
+      read -n 1
+    fi
+  else
+    echo "Unsupported Linux distribution"
+    exit 1
+  fi
+}
+
+# Install Homebrew
+install_homebrew() {
+  if command -v brew &>/dev/null; then
+    echo "Homebrew is already installed."
+  else
+    echo "Installing Homebrew..."
+    NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    
+    # Set up Homebrew in the shell environment
+    if is_linux; then
+      if is_ubuntu || is_alma; then
+        if [[ -d /home/linuxbrew/.linuxbrew ]]; then
+          echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> "$HOME/.bashrc"
+          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+        else
+          echo 'eval "$(/usr/local/bin/brew shellenv)"' >> "$HOME/.bashrc"
+          eval "$(/usr/local/bin/brew shellenv)"
+        fi
+      fi
+    elif is_macos; then
+      if [[ -f /opt/homebrew/bin/brew ]]; then
+        echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> "$HOME/.zshrc"
+        eval "$(/opt/homebrew/bin/brew shellenv)"
+      else
+        echo 'eval "$(/usr/local/bin/brew shellenv)"' >> "$HOME/.zshrc"
+        eval "$(/usr/local/bin/brew shellenv)"
+      fi
+    fi
+  fi
+}
+
+main() {
+  install_dependencies
+  install_homebrew
+  
+  # Test the installation
+  if command -v brew &>/dev/null; then
+    echo "Homebrew installation was successful."
+    brew --version
+  else
+    echo "Homebrew installation failed. Please check the output for errors."
+    exit 1
+  fi
+}
+
+main
