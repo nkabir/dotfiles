@@ -1,5 +1,8 @@
-{{- if eq .os.Codename "noble" -}}
-{{- template "bash/noble.bashrc.tmpl" . -}}
+{{- if eq .chezmoi.os "linux" -}}
+{{- if eq .chezmoi.osRelease.id "ubuntu" -}}
+{{- if eq .chezmoi.osRelease.versionCodename "noble" -}}
+
+{{- template "../bash/noble.bashrc.tmpl" . -}}
 {{- else -}}
 # Default or fallback .bashrc
 
@@ -11,4 +14,3 @@ esac
 
 echo "This is a default .bashrc because your OS is not Ubuntu 24.04 noble."
 {{- end }}
-
