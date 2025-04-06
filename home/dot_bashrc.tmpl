@@ -3,6 +3,8 @@
 {{- if eq .chezmoi.osRelease.versionCodename "noble" -}}
 
 {{- template "../bash/noble.bashrc.tmpl" . -}}
+{{ end }}
+{{ end }}
 {{- else -}}
 # Default or fallback .bashrc
 
