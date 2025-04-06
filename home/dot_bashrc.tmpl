@@ -3,6 +3,7 @@
 {{- if eq .chezmoi.osRelease.versionCodename "noble" -}}
 
 # hello ubuntu noble
+{{- template "noble.bashrc" . -}}
 
 {{ end }}
 {{ end }}
