@@ -116,4 +116,4 @@ if ! shopt -oq posix; then
   fi
 fi
 
-export USER="{{ .username }}"
+export USER="{{ .chezmoi.username }}"
