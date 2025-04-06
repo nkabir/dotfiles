@@ -1,7 +1,7 @@
 #!/bin/bash
 # .chezmoiscripts/run_once_install-homebrew.sh.tmpl
 
-{{ if ne .chezmoi.os "darwin" "linux" -}}
+{{ if not (or (eq .chezmoi.os "darwin") (eq .chezmoi.os "linux")) -}}
 echo "Unsupported OS: {{ .chezmoi.os }}"
 exit 1
 {{ end -}}
