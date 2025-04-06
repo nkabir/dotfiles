@@ -1,0 +1,14 @@
+{{- if eq .os.Codename "noble" -}}
+{{- template "bash/noble.bashrc.tmpl" . -}}
+{{- else -}}
+# Default or fallback .bashrc
+
+# Customize this section for other distros or OS versions
+case $- in
+    *i*) ;;
+      *) return;;
+esac
+
+echo "This is a default .bashrc because your OS is not Ubuntu 24.04 noble."
+{{- end }}
+
