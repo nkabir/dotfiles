@@ -3,12 +3,12 @@
 set -e
 
 # Get OS version from /etc/os-release
-ID="{{ .osRelease.id }}"
-VERSION="{{ .osRelease.versionID }}"
+ID="{{ .chezmoi.osRelease.id }}"
+VERSION="{{ .chezmoi.osRelease.versionID }}"
 
 if [[ "$ID" == "ubuntu" && "$VERSION" == "24.04" ]]; then
   echo "Installing noble.bashrc to ~/.bashrc for Ubuntu 24.04..."
-  cp "{{ .chezmoi.sourceDir }}/home/bash/noble.bashrc" "$HOME/.bashrc"
+  cp "{{ .chezmoi.sourceDir }}/bash/noble.bashrc" "$HOME/.bashrc"
 else
   echo "Skipping noble.bashrc installation: not Ubuntu 24.04."
 fi
