@@ -3,8 +3,8 @@
 set -e
 
 # Get OS version from /etc/os-release
-ID="{{ .osRelease.ID }}"
-VERSION="{{ .osRelease.VERSION_ID }}"
+ID="{{ .osRelease.id }}"
+VERSION="{{ .osRelease.versionID }}"
 
 if [[ "$ID" == "ubuntu" && "$VERSION" == "24.04" ]]; then
   echo "Installing noble.bashrc to ~/.bashrc for Ubuntu 24.04..."
