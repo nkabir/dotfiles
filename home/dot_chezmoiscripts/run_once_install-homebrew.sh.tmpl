@@ -65,24 +65,26 @@ install_homebrew() {
     echo "Installing Homebrew..."
     NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
     
-    # Set up Homebrew in the shell environment
+    # Print information about shell configuration
     if is_linux; then
-      if is_ubuntu || is_alma; then
-        if [[ -d /home/linuxbrew/.linuxbrew ]]; then
-          echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> "$HOME/.bashrc"
-          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-        else
-          echo 'eval "$(/usr/local/bin/brew shellenv)"' >> "$HOME/.bashrc"
-          eval "$(/usr/local/bin/brew shellenv)"
-        fi
+      if [[ -d /home/linuxbrew/.linuxbrew ]]; then
+        echo "Homebrew installed successfully to /home/linuxbrew/.linuxbrew"
+        echo "NOTE: To use Homebrew, you need to add the following to your shell configuration:"
+        echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"'
+      else
+        echo "Homebrew installed successfully"
+        echo "NOTE: To use Homebrew, you need to add the following to your shell configuration:"
+        echo 'eval "$(/usr/local/bin/brew shellenv)"'
       fi
     elif is_macos; then
       if [[ -f /opt/homebrew/bin/brew ]]; then
-        echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> "$HOME/.zshrc"
-        eval "$(/opt/homebrew/bin/brew shellenv)"
+        echo "Homebrew installed successfully to /opt/homebrew"
+        echo "NOTE: To use Homebrew, you need to add the following to your shell configuration:"
+        echo 'eval "$(/opt/homebrew/bin/brew shellenv)"'
       else
-        echo 'eval "$(/usr/local/bin/brew shellenv)"' >> "$HOME/.zshrc"
-        eval "$(/usr/local/bin/brew shellenv)"
+        echo "Homebrew installed successfully"
+        echo "NOTE: To use Homebrew, you need to add the following to your shell configuration:"
+        echo 'eval "$(/usr/local/bin/brew shellenv)"'
       fi
     fi
   fi
@@ -93,13 +95,23 @@ main() {
   install_homebrew
   
   # Test the installation
-  if command -v brew &>/dev/null; then
-    echo "Homebrew installation was successful."
-    brew --version
+  if [[ -f /home/linuxbrew/.linuxbrew/bin/brew ]]; then
+    echo "Verifying Homebrew installation..."
+    /home/linuxbrew/.linuxbrew/bin/brew --version
+  elif [[ -f /opt/homebrew/bin/brew ]]; then
+    echo "Verifying Homebrew installation..."
+    /opt/homebrew/bin/brew --version
+  elif [[ -f /usr/local/bin/brew ]]; then
+    echo "Verifying Homebrew installation..."
+    /usr/local/bin/brew --version
   else
-    echo "Homebrew installation failed. Please check the output for errors."
+    echo "Homebrew installation could not be verified. Please check the output for errors."
     exit 1
   fi
+  
+  echo "Homebrew has been installed successfully."
+  echo "IMPORTANT: Shell configuration changes are required to use Homebrew."
+  echo "Please refer to the notes above about the required configuration changes."
 }
 
 main
