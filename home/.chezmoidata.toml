@@ -1,0 +1,5 @@
+[bashrc_snippets]
+"010-homebrew.bash".enabled = true
+"020-paths.bash".enabled = true
+"030-aliases.bash".enabled = false
+
