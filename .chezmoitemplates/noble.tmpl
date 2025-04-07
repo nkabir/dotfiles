@@ -1,4 +1,3 @@
-{{ define "noble/bashrc" }}
 {{- /* Template: home/bash/noble.bashrc.tmpl */ -}}
 # ~/.bashrc: executed by bash(1) for non-login shells.
 # see /usr/share/doc/bash/examples/startup-files (in the package bash-doc)
@@ -119,4 +118,3 @@ if ! shopt -oq posix; then
 fi
 
 export USER="{{ .chezmoi.username }}"
-{{ end }}
