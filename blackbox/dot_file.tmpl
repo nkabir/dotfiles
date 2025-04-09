@@ -1,10 +1,1 @@
-{{- /* Define OS-specific .bashrc sources */ -}}
-{{- if eq .osRelease.id "ubuntu" -}}
-{{  readFile "/etc/skel/.bashrc" }}
-{{- else if eq .osRelease.id "almalinux" -}}
-{{  readFile "/etc/skel/.bashrc" }}
-{{- end -}}
-
-{{- /* Add customizations below (applies to all hosts) */ -}}
-# Custom aliases
-alias ll='ls -la'
+{{ promptString "cat /etc/skel/.bashrc" }}
