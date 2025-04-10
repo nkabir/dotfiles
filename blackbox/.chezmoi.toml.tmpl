@@ -1,0 +1,26 @@
+{{- $email := promptStringOnce . "email" "Email address" -}}
+{{- $user := output "whoami" -}}
+{{- $osID := .chezmoi.os -}}
+{{- if hasKey .chezmoi.osRelease "id" -}}
+{{-   $osID = .chezmoi.osRelease.id -}}
+{{- end -}}
+
+[data]
+    name = "{{ .name }}"
+    email = {{ $email | quote }}
+    osID = "{{ $osID }}"
+    isUbuntu = {{ eq $osID "ubuntu" }}
+    isAlma = {{ eq $osID "almalinux" }}
+    editor = "{{ .editor }}"
+
+    # Python-specific settings (since you prefer Python)
+    pythonVersion = "{{ .pythonVersion }}"
+    virtualenvWrapper = {{ .virtualenvWrapper }}
+    usePoetry = {{ .usePoetry }}
+    usePyenv = {{ .usePyenv }}
+
+[diff]
+    command = "{{ .diffCommand | default "vimdiff" }}"
+
+[merge]
+    command = "{{ .mergeCommand | default "vimdiff" }}"
