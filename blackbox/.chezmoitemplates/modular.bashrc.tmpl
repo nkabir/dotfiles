@@ -1,0 +1,9 @@
+# Load modular configuration from .bashrc.d directory
+if [ -d "$HOME/.bashrc.d" ]; then
+    for script in "$HOME/.bashrc.d"/*.bash; do
+        if [ -r "$script" ]; then
+            . "$script"
+        fi
+    done
+    unset script
+fi

@@ -9,7 +9,7 @@
     {{- include $ubuntuSkel -}}
 
     # This is a comment for Ubuntu
-    {{- end -}}
+    {{- end }}
 
 {{- /* Check for Alma Linux */ -}}
 {{- else if stat "/etc/redhat-release" -}}
@@ -17,4 +17,6 @@
     {{- if contains "AlmaLinux" $redhatRelease -}}
     {{- include $almaSkel -}}
     {{- end -}}
-{{- end -}}
+{{- end }}
+
+{{ template "modular.bashrc.tmpl" . }}
