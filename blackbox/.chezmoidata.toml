@@ -1,0 +1,6 @@
+[user]
+name = "Your Name"
+email = "your.email@example.com"
+editor = "vim"
+diffCommand = "vimdiff"
+mergeCommand = "vimdiff"
