@@ -1,6 +1,0 @@
-username = "nkb"
-email = "nkb@example.com"
-
-[features]
-homebrew = true
-zsh = false

@@ -1,8 +1,0 @@
-[data]
-  include = true  # Automatically load all values from .chezmoidata.toml
-
-[merge]
-  skip = [
-    {{ if not .features.homebrew }}"home/dot_brewfile"{{ end }},
-    {{ if not .features.zsh }}"home/dot_zshrc"{{ end }}
-  ]
