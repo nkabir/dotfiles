@@ -1,20 +1,2 @@
-{{- $email := promptStringOnce . "email" "Email address" -}}
-{{- $name := promptStringOnce . "name" "Full Name" -}}
-{{- $user := output "whoami" -}}
-{{- $osID := .chezmoi.os -}}
-{{- if hasKey .chezmoi.osRelease "id" -}}
-{{-   $osID = .chezmoi.osRelease.id -}}
-{{- end -}}
-
 [data]
-    name = "{{ $name }}"
-    email = {{ $email | quote }}
-    osID = "{{ $osID }}"
-    isUbuntu = {{ eq $osID "ubuntu" }}
-    isAlma = {{ eq $osID "almalinux" }}
-    editor = "{{ .user.editor | default "vim" }}"
-[diff]
-    command = "{{ .user.diffCommand | default "vimdiff" }}"
-
-[merge]
-    command = "{{ .user.mergeCommand | default "vimdiff" }}"
+email = "{{ .user.email }}"
