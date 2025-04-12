@@ -1,7 +1,7 @@
 # scratch space
 
 {{ $username := output "whoami" }}
-{{ $fullname := output "sh" "-c" "getent passwd nkabir" }}
+{{ $entry := output "sh" "-c" (printf "getent passwd %s" $username) }}
+{{ $fullmap := splitn ":" 7 $entry }}
 
-username {{ $username }}
-fullname {{ $fullname }}
+{{ $fullmap._4 | replace "," "" }}
