@@ -1,0 +1,7 @@
+# scratch space
+
+{{ $username := output "whoami" }}
+{{ $fullname := output "sh" "-c" "getent passwd nkabir" }}
+
+username {{ $username }}
+fullname {{ $fullname }}
