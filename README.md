@@ -13,7 +13,10 @@ CWIQ-Seed is an automated collection of tools that enables developers to create 
 to ensure that dotfiles and secrets are properly managed. The scope of CWIQ-Seed is limited to the developer’s environment. Non-developer modifications to the host environment must be made with Ansible playbooks that are themselves managed by CWIQ-Seed.
 
 ## Setup
-Use a bare metal or VM host (KERNEL_RUNTIME). Create your user with sudo privileges. Then run
+
+1. Provision a bare metal or VM host (KERNEL_RUNTIME) with Alma Linux 9 or Ubuntu 24.04.
+2. Create your user with sudo privileges.
+3. Then run
 
 ```bash
 $ curl -L tinyurl.com/cwiq-seed-init | sh
