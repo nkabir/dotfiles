@@ -10,7 +10,19 @@
 # ChezMoi Main Configuration
 {{ $fullName :=
 	output (joinPath .chezmoi.sourceDir "scripts/get-full-name.py") }}
+{{- $osID := "" -}}
+{{- $osVersion := "" -}}
+{{- if (eq .chezmoi.os "linux") -}}
+{{-   if (.chezmoi.osRelease.id) -}}
+{{-     $osID = .chezmoi.osRelease.id -}}
+{{-     $osVersion = .chezmoi.osRelease.versionID -}}
+{{-   end -}}
+{{- end -}}
 
 
 [data]
+  isUbuntu = {{ eq $osID "ubuntu" }}
+  isAlmaLinux = {{ eq $osID "almalinux" }}
   fullName = {{ $fullName | quote }}
+  #email = "your.email@example.com"
+  #name = "Your Name"

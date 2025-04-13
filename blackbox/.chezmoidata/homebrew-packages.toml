@@ -1,0 +1,24 @@
+
+[homebrew]
+common = [
+"git",
+"vim",
+"tmux",
+"htop",
+"ripgrep",
+"fd",
+"bat",
+"jq"
+]
+
+ubuntu = [
+"tree",
+"ncdu",
+"neofetch"
+]
+
+almalinux = [
+"tree",
+"nmap",
+"iftop"
+]
