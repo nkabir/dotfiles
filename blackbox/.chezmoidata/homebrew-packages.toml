@@ -1,7 +1,13 @@
 
 [homebrew]
 common = [
+"ansible",
+"ansible-builder",
+"ansible-cmdb",
+"ansible-creator",
+"ansible-lint",
 "bat",
+"chezmoi",
 "fd",
 "git",
 "htop",
@@ -10,11 +16,6 @@ common = [
 "starship",
 "tmux",
 "vim",
-"ansible",
-"ansible-builder",
-"ansible-cmdb",
-"ansible-creator",
-"ansible-lint",
 ]
 
 ubuntu = [
