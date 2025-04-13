@@ -9,7 +9,7 @@
 # available to templates
 # ChezMoi Main Configuration
 {{ $fullName :=
-	output (joinPath .chezmoi.sourceDir "scripts/get-full-name.py") }}
+	output (joinPath .chezmoi.sourceDir "dot_scripts/get-full-name.py") }}
 {{- $osID := "" -}}
 {{- $osVersion := "" -}}
 {{- if (eq .chezmoi.os "linux") -}}
