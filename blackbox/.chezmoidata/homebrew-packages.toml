@@ -1,14 +1,15 @@
 
 [homebrew]
 common = [
-"git",
-"vim",
-"tmux",
-"htop",
-"ripgrep",
-"fd",
 "bat",
-"jq"
+"fd",
+"git",
+"htop",
+"jq",
+"ripgrep",
+"starship",
+"tmux",
+"vim",
 ]
 
 ubuntu = [
