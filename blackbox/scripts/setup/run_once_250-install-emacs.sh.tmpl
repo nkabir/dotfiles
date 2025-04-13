@@ -1,0 +1,15 @@
+#!/bin/bash
+
+set -eufo pipefail
+
+{{ if .isUbuntu -}}
+# Install Emacs on Ubuntu
+sudo apt-get update
+sudo apt-get install -y emacs
+{{ else if .isAlmaLinux -}}
+# Install Emacs on Alma Linux
+sudo dnf install -y epel-release
+sudo dnf install -y emacs
+{{ end -}}
+
+echo "Emacs has been installed successfully!"
