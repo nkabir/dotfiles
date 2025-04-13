@@ -7,3 +7,10 @@
 
 # data here is merged with data defined in .chezmoidata and made
 # available to templates
+# ChezMoi Main Configuration
+{{ $fullName :=
+	output (joinPath .chezmoi.sourceDir "scripts/get-full-name.py") }}
+
+
+[data]
+  fullName = {{ $fullName | quote }}

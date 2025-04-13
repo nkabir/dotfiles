@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-mkdir -p $HOME/.basrhc.d
+mkdir -p $HOME/.bashrc.d

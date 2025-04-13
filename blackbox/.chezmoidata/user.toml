@@ -1,3 +1,2 @@
-# user specific settings
 [user]
-    username = "{{ output .whoami }}"
+    color = "red"

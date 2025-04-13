@@ -1,7 +1,7 @@
 # scratch space
 
-{{ $username := output "whoami" }}
-{{ $entry := output "sh" "-c" (printf "getent passwd %s" $username) }}
-{{ $fullmap := splitn ":" 7 $entry }}
+{{ $fullname :=
+	output (joinPath .chezmoi.sourceDir "scripts/get-full-name.sh") }}
 
-{{ $fullmap._4 | replace "," "" }}
+
+full name {{ $fullname }}
