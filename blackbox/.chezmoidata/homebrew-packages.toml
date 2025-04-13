@@ -10,16 +10,21 @@ common = [
 "starship",
 "tmux",
 "vim",
+"ansible",
+"ansible-builder",
+"ansible-cmdb",
+"ansible-creator",
+"ansible-lint",
 ]
 
 ubuntu = [
 "tree",
 "ncdu",
-"neofetch"
+"neofetch",
 ]
 
 almalinux = [
 "tree",
 "nmap",
-"iftop"
+"iftop",
 ]
