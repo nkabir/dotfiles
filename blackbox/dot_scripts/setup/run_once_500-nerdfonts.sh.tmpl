@@ -1,0 +1,61 @@
+#!/bin/bash
+
+# ChezMoi template to install Nerd Fonts
+# {{ if .isUbuntu -}}
+# Ubuntu 24.04 installation
+# {{- else if .isAlmaLinux -}}
+# Alma Linux 9.X installation
+# {{- end }}
+
+set -euo pipefail
+
+# Create fonts directory if it doesn't exist
+FONT_DIR="$HOME/.local/share/fonts"
+SYMBOLS_DIR="$HOME/.local/share/fonts/nerdfont-symbols"
+mkdir -p "$FONT_DIR"
+mkdir -p "$SYMBOLS_DIR"
+
+# Configuration
+NERD_FONTS_VERSION="v3.1.1"
+NERD_FONTS_REPO="https://github.com/ryanoasis/nerd-fonts"
+FONT_NAMES=("FiraCode" "JetBrainsMono" "Hack")
+
+echo "Installing Nerd Fonts version $NERD_FONTS_VERSION"
+
+# Ensure required tools are installed
+{{ if .isUbuntu -}}
+if ! command -v wget &> /dev/null || ! command -v unzip &> /dev/null; then
+    echo "Installing required packages..."
+    sudo apt-get update && sudo apt-get install -y wget unzip
+fi
+{{ else if .isAlmaLinux -}}
+if ! command -v wget &> /dev/null || ! command -v unzip &> /dev/null; then
+    echo "Installing required packages..."
+    sudo dnf install -y wget unzip
+fi
+{{ end }}
+
+# Download and install fonts
+for FONT_NAME in "${FONT_NAMES[@]}"; do
+    echo "Downloading $FONT_NAME..."
+    DOWNLOAD_URL="$NERD_FONTS_REPO/releases/download/$NERD_FONTS_VERSION/$FONT_NAME.zip"
+
+    # Create temporary directory for downloads
+    TEMP_DIR=$(mktemp -d)
+
+    # Download font
+    wget -q "$DOWNLOAD_URL" -O "$TEMP_DIR/$FONT_NAME.zip"
+
+    # Extract font
+    echo "Installing $FONT_NAME to $FONT_DIR..."
+    unzip -q -o "$TEMP_DIR/$FONT_NAME.zip" -d "$FONT_DIR/$FONT_NAME"
+
+    # Clean up
+    rm -rf "$TEMP_DIR"
+done
+
+# Update font cache
+echo "Updating font cache..."
+fc-cache -f
+
+echo "Nerd Fonts installation completed!"
