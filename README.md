@@ -5,12 +5,12 @@ CWIQ-Seed is the first-mover on a network. Before there are PXE servers, DHCP se
 
 CWIQ-Seed is an automated collection of tools that enables developers to create personalized environments quickly on hosts. It combines tools including:
 
-* ChezMoi
-* Ansible
-* Direnv
-* Usepackage
-* BitWarden 
-* Starship
+* [ChezMoi](https://www.chezmoi.io/)
+* [Ansible](https://docs.ansible.com/ecosystem.html)
+* [direnv](https://direnv.net/)
+* [usepackage](https://github.com/jonathanhogg/usepackage)
+* [BitWarden](https://bitwarden.com/)
+* [Starship](https://starship.rs/)
   
 to ensure that dotfiles and secrets are properly managed. The scope of CWIQ-Seed is limited to the developer’s environment. Non-developer modifications to the host environment must be made with Ansible playbooks that are themselves managed by CWIQ-Seed.
 
