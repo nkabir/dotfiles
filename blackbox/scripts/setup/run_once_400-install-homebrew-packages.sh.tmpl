@@ -1,0 +1,49 @@
+#!/bin/bash
+# File: run_once_install-homebrew-packages.tmpl
+
+set -euo pipefail
+
+# Load packages from data
+# Common packages for all platforms
+COMMON_PACKAGES=({{ range .homebrew.common }}{{ printf "%q " . }}{{ end }})
+
+{{ if .isUbuntu -}}
+# Ubuntu-specific packages
+OS_PACKAGES=({{ range .homebrew.ubuntu }}{{ printf "%q " . }}{{ end }})
+echo "Detected Ubuntu system, installing Ubuntu-specific packages..."
+{{ else if .isAlmaLinux -}}
+# Alma Linux-specific packages
+OS_PACKAGES=({{ range .homebrew.almalinux }}{{ printf "%q " . }}{{ end }})
+echo "Detected Alma Linux system, installing Alma Linux-specific packages..."
+{{ else -}}
+OS_PACKAGES=()
+echo "Unknown OS detected, installing only common packages..."
+{{ end }}
+
+# Check if Homebrew is available
+if ! command -v brew &> /dev/null; then
+    echo "Error: Homebrew is not installed or not in PATH"
+    exit 1
+fi
+
+# Update Homebrew
+echo "Updating Homebrew..."
+brew update
+
+# Install common packages
+echo "Installing common packages..."
+for package in "${COMMON_PACKAGES[@]}"; do
+    echo "Installing $package..."
+    brew install "$package" || echo "Failed to install $package, continuing..."
+done
+
+# Install OS-specific packages
+if [ ${#OS_PACKAGES[@]} -gt 0 ]; then
+    echo "Installing OS-specific packages..."
+    for package in "${OS_PACKAGES[@]}"; do
+        echo "Installing $package..."
+        brew install "$package" || echo "Failed to install $package, continuing..."
+    done
+fi
+
+echo "All Homebrew packages installed successfully"

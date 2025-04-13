@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+
+# Check if Homebrew is already installed
+if command -v brew &> /dev/null; then
+    echo "Homebrew is already installed"
+    exit 0
+fi
+
+echo "Installing Homebrew..."
+
+# Install dependencies
+{{- if .isUbuntu }}
+sudo apt update
+sudo apt install -y build-essential procps curl file git
+{{- else if .isAlmaLinux }}
+sudo dnf groupinstall -y 'Development Tools'
+sudo dnf install -y procps-ng curl file git
+sudo dnf install -y libxcrypt-compat # needed on Alma Linux 9
+{{- end }}
+
+# Install Homebrew
+NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Add Homebrew to path
+# For Intel processors
+if [ -d "/home/linuxbrew/.linuxbrew" ]; then
+    BREW_PATH="/home/linuxbrew/.linuxbrew"
+# For regular user installation
+elif [ -d "$HOME/.linuxbrew" ]; then
+    BREW_PATH="$HOME/.linuxbrew"
+fi
+
+if [ -n "$BREW_PATH" ]; then
+    # Create .homebrew_profile for ChezMoi to manage
+    cat << EOF > "${HOME}/.homebrew_profile"
+# Homebrew environment setup
+export HOMEBREW_PREFIX="$BREW_PATH"
+export HOMEBREW_CELLAR="$BREW_PATH/Cellar"
+export HOMEBREW_REPOSITORY="$BREW_PATH/Homebrew"
+export PATH="$BREW_PATH/bin:$BREW_PATH/sbin:\$PATH"
+export MANPATH="$BREW_PATH/share/man:\$MANPATH"
+export INFOPATH="$BREW_PATH/share/info:\$INFOPATH"
+EOF
+
+    # Source the homebrew profile right away
+    source "${HOME}/.homebrew_profile"
+
+    # Test the installation
+    brew doctor
+    brew install gcc
+
+    echo "Homebrew installation completed successfully!"
+    echo "Configuration has been added to ~/.homebrew_profile"
+    echo "Please restart your shell or source ~/.homebrew_profile"
+else
+    echo "Homebrew installation path not found!"
+    exit 1
+fi
