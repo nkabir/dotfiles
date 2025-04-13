@@ -14,9 +14,10 @@ to ensure that dotfiles and secrets are properly managed. The scope of CWIQ-Seed
 
 ## Setup
 
-1. Provision a bare metal or VM host (KERNEL_RUNTIME) with Alma Linux 9 or Ubuntu 24.04.
-2. Create your user with sudo privileges.
-3. Then run
+1. Fork this repository into your Github account under your user `$username/dotfiles`
+2. Provision a bare metal or VM host (KERNEL_RUNTIME) with Alma Linux 9 or Ubuntu 24.04.
+3. Create your user with sudo privileges.
+4. Then run
 
 ```bash
 $ curl -L tinyurl.com/cwiq-seed-init | sh
