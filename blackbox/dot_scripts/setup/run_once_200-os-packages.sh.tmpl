@@ -4,11 +4,23 @@
 # Ubuntu specific packages
 echo "Installing Ubuntu packages..."
 sudo apt update
+sudo apt install -y \
+     molly-guard \
+     build-essential \
+     libssl-dev \
+     libffi-dev \
+     python3-dev \
 sudo apt upgrade -y
 {{- else if .isAlmaLinux }}
 # Alma Linux specific packages
 echo "Installing Alma Linux packages..."
 sudo dnf update -y
+sudo dnf install -y \
+     gcc \
+     make \
+     openssl-devel \
+     libffi-devel \
+     python3-devel \
 sudo dnf upgrade -y
 {{- else }}
 echo "Unknown OS, skipping package installation"
