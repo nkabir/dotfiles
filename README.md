@@ -1,7 +1,7 @@
 # CWIQ-Seed
 _Repeatable Developer Environments_
 
-CWIQ-Seed is the first-mover on a network. Before there are PXE servers, DHCP servers, DNS servers, there needs to be a host that initializes the first action.
+CWIQ-Seed is the first-mover on a network. Before there are PXE servers, DHCP servers, DNS servers, there needs to be a host that initializes the _first action_.
 
 CWIQ-Seed is an automated collection of tools that enables developers to create personalized environments quickly on hosts. It combines tools including:
 
