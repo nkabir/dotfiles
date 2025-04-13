@@ -1,4 +1,4 @@
-# ChezMoi repository
+# CWIQ-Seed
 
 The main namespace is `blackbox`. It is selected in `.chezmoiroot`.
 
@@ -7,7 +7,7 @@ The main namespace is `blackbox`. It is selected in `.chezmoiroot`.
 `bash` is the shell used to coordinate the environment. `bash` is
 configured to load snippets from `$HOME/.bashrc.d`.
 
-
+```bash
 {{/* boolean feature tags */}}
 {{- $ephemeral := false -}}{{/* true if this machine is ephemeral, e.g. a cloud or VM instance */}}
 {{- $work := false -}}{{/* true if this machine is a work machine */}}
@@ -80,3 +80,4 @@ configured to load snippets from `$HOME/.bashrc.d`.
 
 [github]
     refreshPeriod = "12h"
+```bash
