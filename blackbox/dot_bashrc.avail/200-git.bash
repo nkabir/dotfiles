@@ -4,9 +4,9 @@ alias gti="git"
 
 # git shortcuts
 alias gita="git add :/"
-alias gitc="unset PYTHONPATH && git commit -m"
+alias gitc="git commit -m"
 alias gitd="git diff"
-alias gitg="unset PYTHONPATH && git commit -m 'updating glassware'"
+alias gitg="git commit -m 'updating glassware'"
 alias gitl="git pull"
 alias gitp="git push"
 alias gitsa="git submodule add"
