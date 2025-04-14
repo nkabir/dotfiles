@@ -12,8 +12,10 @@ common = [
 "git",
 "htop",
 "jq",
+"kcl-lang/tap/kcl",
 "ripgrep",
 "starship",
+"the_silver_searcher",
 "tmux",
 "vim",
 ]
