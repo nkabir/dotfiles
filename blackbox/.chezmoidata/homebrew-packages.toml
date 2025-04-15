@@ -8,6 +8,7 @@ common = [
 "ansible-lint",
 "bat",
 "chezmoi",
+"direnv",
 "fd",
 "git",
 "htop",
@@ -17,17 +18,16 @@ common = [
 "starship",
 "the_silver_searcher",
 "tmux",
+"tree",
 "vim",
 ]
 
 ubuntu = [
-"tree",
 "ncdu",
 "neofetch",
 ]
 
 almalinux = [
-"tree",
 "nmap",
 "iftop",
 ]
