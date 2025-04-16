@@ -1,10 +1,15 @@
 #!/usr/bin/env bash
 
+# This script installs necessary packages for a specific Linux
+# distribution. ONLY install packages needed for CWIQ-Seed. Additional
+# packages should be installed via Ansible.
+
 {{- if .isUbuntu }}
 # Ubuntu specific packages
 echo "Installing Ubuntu packages..."
 sudo apt update
 sudo apt install -y \
+     ccze \
      molly-guard \
      build-essential \
      libssl-dev \
@@ -17,6 +22,7 @@ sudo apt upgrade -y
 echo "Installing Alma Linux packages..."
 sudo dnf update -y
 sudo dnf install -y \
+     ccze \
      gcc \
      make \
      openssl-devel \
