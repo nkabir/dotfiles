@@ -48,3 +48,5 @@ function host-runtime() {
 	echo "KERNEL_RUNTIME"
     fi
 }
+
+export HOST_RUNTIME=$(host-runtime)
