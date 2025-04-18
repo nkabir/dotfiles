@@ -14,17 +14,19 @@ common = [
 "htop",
 "jq",
 "kcl-lang/tap/kcl",
+"mani",
 "ripgrep",
 "starship",
 "the_silver_searcher",
 "tmux",
 "tree",
+"uv",
 "vim",
 ]
 
 ubuntu = [
 "ncdu",
-"neofetch",
+"macchina",
 ]
 
 almalinux = [

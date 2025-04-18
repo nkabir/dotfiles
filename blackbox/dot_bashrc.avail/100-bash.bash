@@ -38,14 +38,14 @@ function la() {
 
 function host-runtime() {
     if [ -f /proc/cpuinfo ] && grep -q '^flags.* hypervisor' /proc/cpuinfo; then
-	echo "KERNEL_RUNTIME"
+	echo "kernel"
     elif [ -f /proc/1/environ ] && grep -q 'container=lxc' /proc/1/environ; then
-	echo "OS_RUNTIME"
+	echo "system"
     elif [ -f /.dockerenv ] || [ -f /.containerenv ]; then
-	echo "PROCESS_RUNTIME"
+	echo "process"
     else
 	# Default case if none of the above are detected
-	echo "KERNEL_RUNTIME"
+	echo "kernel"
     fi
 }
 
