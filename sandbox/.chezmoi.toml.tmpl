@@ -1,0 +1,9 @@
+{{- $email := promptStringOnce . "email" "Email address" -}}
+{{- $name := promptStringOnce . "name" "Full Name" -}}
+# Main ChezMoi configuration file (sandbox)
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+
+[data]
+  email = {{ $email | quote }}
+  name = {{ $name | quote }}
