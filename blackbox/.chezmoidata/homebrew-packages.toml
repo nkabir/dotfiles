@@ -7,6 +7,7 @@ common = [
 "ansible-creator",
 "ansible-lint",
 "bat",
+"bitwarden-cli",
 "chezmoi",
 "direnv",
 "fd",
