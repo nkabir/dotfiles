@@ -1,6 +1,6 @@
 # ChezMoi
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-function cz() {
-  chezmoi "$@"
-}
+# function cz() {
+#  chezmoi "$@"
+# }
