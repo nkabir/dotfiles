@@ -4,7 +4,7 @@
 alias cz="chezmoi"
 
 # check if __start_chezmoi is defined
-# if not, source the completion script
+# if not, source the completion script to enable completion for the "cz" alias
 if ! type -t __start_chezmoi &>/dev/null; then
     if [ -f "$HOME/.local/share/bash-completion/completions/chezmoi.bash" ]; then
 	source "$HOME/.local/share/bash-completion/completions/chezmoi.bash"
