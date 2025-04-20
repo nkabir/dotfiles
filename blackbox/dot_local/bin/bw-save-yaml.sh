@@ -45,4 +45,4 @@ ENCODED_JSON=$(cat ${YAML_FILE:?}.updated.json | bw encode)
 bw edit item "${ITEM_ID:?}" ${ENCODED_JSON:?}"
 
 # Clean up temporary files
-rm your_note.yaml your_note.json updated_note.json
+rm ${YAML_FILE:?}.json ${YAML_FILE:?}.updated.json
