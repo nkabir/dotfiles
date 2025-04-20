@@ -8,21 +8,31 @@
 # data here is merged with data defined in .chezmoidata and made
 # available to templates
 # ChezMoi Main Configuration
-{{ $fullName :=
-	output (joinPath .chezmoi.sourceDir "dot_scripts/get-full-name.py") }}
-{{- $osID := "" -}}
+{{- $email := promptStringOnce . "email" "Email address" -}}
+{{- $operator :=
+    output (joinPath .chezmoi.sourceDir
+    "../common/scripts/get-full-name.py") -}}
+{{- $exenv :=
+    output (joinPath .chezmoi.sourceDir
+    "../common/scripts/get-exenv.py") -}}
+
+# operating system details
+{{- $osId := "" -}}
 {{- $osVersion := "" -}}
 {{- if (eq .chezmoi.os "linux") -}}
 {{-   if (.chezmoi.osRelease.id) -}}
-{{-     $osID = .chezmoi.osRelease.id -}}
+{{-     $osId = .chezmoi.osRelease.id -}}
 {{-     $osVersion = .chezmoi.osRelease.versionID -}}
 {{-   end -}}
 {{- end -}}
 
+###
 
 [data]
-  isUbuntu = {{ eq $osID "ubuntu" }}
-  isAlmaLinux = {{ eq $osID "almalinux" }}
-  fullName = {{ $fullName | quote }}
-  #email = "your.email@example.com"
-  #name = "Your Name"
+  email = {{ $email | quote }}
+  operator = {{ $operator | quote }}
+  exenv = {{ $exenv | quote }} # execution environment
+  osId = {{ $osId | quote }}
+  osVersion = {{ $osVersion | quote }}
+  isUbuntu = {{ eq $osId "ubuntu" }}
+  isAlmaLinux = {{ eq $osId "almalinux" }}
