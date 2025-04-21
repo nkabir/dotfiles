@@ -1,36 +1,46 @@
 #!/usr/bin/env bash
 
-# --- Configuration ---
-readonly YAML_FILE="${1:?Missing YAML file}"
-readonly ITEM_ID="${2:?Missing BitWarden item identifier}"
+# Usage: ./add-or-replace-attachment.sh "<item_name>" "<attachment_filename>" "<new_file_path>"
+readonly ITEM_NAME="$1"
+readonly ATTACHMENT_FILENAME="$2"
 
-if [[ -z "$ITEM_ID" || -z "$YAML_FILE" ]]; then
-    echo "Usage: $0 <item-id> <yaml-file>"
+# The new file path should be the full path to the new file you want to upload
+# The script will delete the existing attachment with the same filename
+# and replace it with the new file.
+# if blank, it will use the current directory and the attachment filename
+readonly NEW_FILE_PATH="${3:-$(pwd)/$ATTACHMENT_FILENAME}"
+
+if [[ -z "$ITEM_NAME" || -z "$ATTACHMENT_FILENAME" || -z "$NEW_FILE_PATH" ]]; then
+    echo "Usage: $0 \"<item_name>\" \"<attachment_filename>\" \"<new_file_path>\""
     exit 1
 fi
 
-if [[ ! -f "$YAML_FILE" ]]; then
-    echo "YAML file not found: $YAML_FILE"
+if [[ -z "$BW_SESSION" ]]; then
+    echo "Please unlock your Bitwarden vault and export the BW_SESSION environment variable."
     exit 1
 fi
 
-# Read YAML file contents
-YAML_CONTENT=$(<"$YAML_FILE")
+# Get item JSON
+ITEM_JSON=$(bw get item "$ITEM_NAME")
+if [[ -z "$ITEM_JSON" || "$ITEM_JSON" == "Not found." ]]; then
+    echo "Item named '$ITEM_NAME' not found."
+    exit 1
+fi
 
-# Escape newlines for JSON
-YAML_CONTENT_ESCAPED=$(printf '%s' "$YAML_CONTENT" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read())[1:-1])')
+ITEM_ID=$(echo "$ITEM_JSON" | jq -r '.id')
 
-PAYLOAD="$(bw get item "$ITEM_ID")"
+# Check for existing attachment
+ATTACHMENT_ID=$(echo "$ITEM_JSON" | jq -r --arg name "$ATTACHMENT_FILENAME" '.attachments[] | select(.fileName == $name) | .id')
 
-# extract "id" from PAYLOAD with jq
-ITEM_GUID=$(echo "$PAYLOAD" | jq -r '.id')
+if [[ -n "$ATTACHMENT_ID" && "$ATTACHMENT_ID" != "null" ]]; then
+    echo "Replacing existing attachment..."
+    bw delete attachment "$ATTACHMENT_ID" --itemid "$ITEM_ID"
+else
+    echo "Adding new attachment..."
+fi
 
+# Upload new attachment
+bw create attachment --file "$NEW_FILE_PATH" --itemid "$ITEM_ID"
 
-# Retrieve the item, update notes, encode, and edit
-# bw get item "$ITEM_ID" \
-echo $PAYLOAD \
-    | jq --arg note "$YAML_CONTENT_ESCAPED" '.notes = $note' \
-    | bw encode \
-    | bw edit item "$ITEM_GUID"
-
+echo "Operation completed successfully for '$ITEM_NAME'."
 bw sync
