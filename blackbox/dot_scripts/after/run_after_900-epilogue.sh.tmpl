@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# 900-epilogue.sh
+# This script is run at the end of the installation process.
+# It is responsible for cleaning up any temporary files or directories
+# and performing any final configuration tasks.
+
+# if $HOME/bin exsists, delete it
+if [[ -d "$HOME/bin" ]]; then
+  rm -rf "$HOME/bin"
+fi
+
+# sudo copy ~/.etc/sudoers.d/user-nopassword to /etc/sudoers.d/{{.chezmoi.username}}-nopassword
+if [[ -f "$HOME/.etc/sudoers.d/user-nopassword" ]]; then
+  sudo cp "$HOME/.etc/sudoers.d/user-nopassword" /etc/sudoers.d/{{.chezmoi.username}}-nopassword
+  sudo chmod 0440 /etc/sudoers.d/{{.chezmoi.username}}-nopassword
+fi
