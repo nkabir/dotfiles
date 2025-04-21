@@ -23,6 +23,7 @@ common = [
 "tree",
 "uv",
 "vim",
+"yq",
 ]
 
 ubuntu = [
