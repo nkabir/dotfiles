@@ -9,8 +9,7 @@ if [[ -d "$HOME/bin" ]]; then
   rm -rf "$HOME/bin"
 fi
 
-# sudo copy ~/.etc/sudoers.d/user-nopassword to /etc/sudoers.d/{{.chezmoi.username}}-nopassword
-if [[ -f "$HOME/.etc/sudoers.d/user-nopassword" ]]; then
-  sudo cp "$HOME/.etc/sudoers.d/user-nopassword" /etc/sudoers.d/{{.chezmoi.username}}-nopassword
-  sudo chmod 0440 /etc/sudoers.d/{{.chezmoi.username}}-nopassword
+if [[ -f "$HOME/.etc/sudoers.d/user-nopasswd" ]]; then
+    sudo cp "$HOME/.etc/sudoers.d/user-nopasswd" /etc/sudoers.d/{{.chezmoi.username}}-nopasswd
+    sudo chmod 0440 /etc/sudoers.d/{{.chezmoi.username}}-nopasswd
 fi
