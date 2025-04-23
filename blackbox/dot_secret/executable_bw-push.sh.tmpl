@@ -1,0 +1,149 @@
+#!/bin/bash
+# bw-push.sh - Push files from local directory to Bitwarden as attachments
+# This script is managed by chezmoi
+
+set -euo pipefail
+
+{{- if .isUbuntu }}
+# Ubuntu-specific settings
+JQ_CMD="jq"
+{{- else if .isAlmaLinux }}
+# Alma Linux-specific settings
+JQ_CMD="jq"
+{{- else }}
+# Default settings
+JQ_CMD="jq"
+{{- end }}
+
+# Check if bitwarden CLI is installed
+if ! command -v bw &> /dev/null; then
+    echo "Error: Bitwarden CLI is not installed. Please install it first."
+    exit 1
+fi
+
+# Check if jq is installed
+if ! command -v $JQ_CMD &> /dev/null; then
+    echo "Error: $JQ_CMD is not installed. Please install it first."
+    exit 1
+fi
+
+# Check if we have an active Bitwarden session
+if [ -z "${BW_SESSION:-}" ]; then
+    echo "No BW_SESSION environment variable found."
+    echo "Please log in and unlock Bitwarden first with:"
+    echo "  bw login"
+    echo "  export BW_SESSION=\$(bw unlock --raw)"
+    exit 1
+fi
+
+# Config file location
+CONFIG_FILE="${HOME}/.config/chezmoi/secrets.toml"
+
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo "Error: Config file not found at $CONFIG_FILE"
+    exit 1
+fi
+
+# Base directory for storing secrets
+SECRET_DIR="${HOME}/.secret"
+
+# Function to extract array values from a TOML string
+extract_array_values() {
+    local array_str="$1"
+    # Remove brackets and split by commas
+    local values=$(echo "$array_str" | sed 's/^\[//;s/\]$//;s/, / /g;s/,/ /g')
+    # Remove quotes from each value
+    echo "$values" | sed 's/"//g;s/'"'"'//g'
+}
+
+# Function to parse the TOML file and extract sections with files
+parse_config_and_upload() {
+    local current_section=""
+
+    while IFS= read -r line; do
+        # Skip comments and empty lines
+        [[ "$line" =~ ^#.*$ || "$line" =~ ^[[:space:]]*$ ]] && continue
+
+        # Check if this is a section header
+        if [[ "$line" =~ ^\[secrets\.bitwarden\.([^\]]+)\]$ ]]; then
+            current_section="${BASH_REMATCH[1]}"
+
+        # Check if this is a files array
+        elif [[ "$line" =~ ^[[:space:]]*files[[:space:]]*=[[:space:]]*\[(.*)\]$ ]]; then
+            # Extract files from the array
+            local files_array="${BASH_REMATCH[1]}"
+            local files=($(extract_array_values "$files_array"))
+
+            # Process each file
+            for file in "${files[@]}"; do
+                # Skip empty values
+                [[ -z "$file" ]] && continue
+
+                local file_path="$SECRET_DIR/bitwarden/$current_section/$file"
+
+                if [ ! -f "$file_path" ]; then
+                    echo "Warning: File $file_path does not exist, skipping..."
+                    continue
+                fi
+
+                echo "Uploading $file for section $current_section..."
+
+                # Generate the note name (e.g., "base.ssh" from "base/ssh")
+                note_name=$(echo "$current_section" | sed 's/\//./')
+
+                # Get the item ID
+                item_id=$(bw get item "$note_name" 2>/dev/null | $JQ_CMD -r '.id' 2>/dev/null)
+
+                if [ -z "$item_id" ] || [ "$item_id" == "null" ]; then
+                    echo "  Note $note_name doesn't exist. Creating it..."
+
+                    # Create a template for a new secure note
+                    note_template=$($JQ_CMD -n \
+                      --arg name "$note_name" \
+                      '{
+                        "organizationId": null,
+                        "collectionIds": null,
+                        "folderId": null,
+                        "type": 2,
+                        "name": $name,
+                        "notes": "Created by chezmoi bw-push.sh script",
+                        "favorite": false,
+                        "secureNote": {"type": 0}
+                      }')
+
+                    # Create the new note
+                    new_item=$(echo "$note_template" | bw encode | bw create item)
+                    item_id=$(echo "$new_item" | $JQ_CMD -r '.id')
+
+                    if [ -z "$item_id" ] || [ "$item_id" == "null" ]; then
+                        echo "  Error: Failed to create note $note_name"
+                        continue
+                    fi
+                fi
+
+                # Check if the attachment already exists
+                existing_attachments=$(bw get item "$note_name" | $JQ_CMD -r '.attachments[]? | select(.fileName == "'$file'") | .id' 2>/dev/null)
+
+                if [ -n "$existing_attachments" ]; then
+                    echo "  Attachment $file already exists. Deleting it first..."
+                    for attachment_id in $existing_attachments; do
+                        if ! bw delete attachment "$attachment_id" --itemid "$item_id" >/dev/null 2>&1; then
+                            echo "  Warning: Failed to delete existing attachment $file"
+                        fi
+                    done
+                fi
+
+                # Upload the attachment
+                if bw create attachment --file "$file_path" --itemid "$item_id" >/dev/null 2>&1; then
+                    echo "  Uploaded $file successfully."
+                else
+                    echo "  Failed to upload $file."
+                fi
+            done
+        fi
+    done < "$CONFIG_FILE"
+}
+
+echo "Starting Bitwarden secrets push..."
+parse_config_and_upload
+echo "Bitwarden secrets push completed!"
