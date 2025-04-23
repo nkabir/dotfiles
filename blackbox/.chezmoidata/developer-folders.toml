@@ -9,6 +9,7 @@ dirs = [
   { path = ".ssh", mode = "0700" },
   { path = ".cache", mode = "0755" },
   { path = ".gnupg", mode = "0700" },
+  { path = "mnt", mode = "0755" },
   { path = ".config/systemd/user", mode = "0755" },
 ]
 
