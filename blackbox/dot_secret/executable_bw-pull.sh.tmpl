@@ -1,115 +1,44 @@
-#!/bin/bash
-# bw-pull.sh - Pull files from Bitwarden and store them in local directory
-# This script is managed by chezmoi
+# dot_secret/bw-pull.sh.tmpl
+#!/usr/bin/env bash
+set -eo pipefail
 
-set -euo pipefail
+# Initialize environment
+SECRETS_DIR="$HOME/.secrets/bitwarden"
+LOG_FILE="missing.log"
 
-{{- if .isUbuntu }}
-# Ubuntu-specific settings
-JQ_CMD="jq"
-{{- else if .isAlmaLinux }}
-# Alma Linux-specific settings
-JQ_CMD="jq"
-{{- else }}
-# Default settings
-JQ_CMD="jq"
-{{- end }}
-
-# Check if bitwarden CLI is installed
-if ! command -v bw &> /dev/null; then
-    echo "Error: Bitwarden CLI is not installed. Please install it first."
-    exit 1
+# if BW_SESSION not set, login to Bitwarden
+if [[ -z "$BW_SESSION" ]]; then
+  echo "BW_SESSION is not set. Please log into Bitwarden first."
+  exit 1
 fi
 
-# Check if jq is installed
-if ! command -v $JQ_CMD &> /dev/null; then
-    echo "Error: $JQ_CMD is not installed. Please install it first."
-    exit 1
-fi
+# Delete existing log files
+find "$SECRETS_DIR" -name "$LOG_FILE" -delete
 
-# Check if we have an active Bitwarden session
-if [ -z "${BW_SESSION:-}" ]; then
-    echo "No BW_SESSION environment variable found."
-    echo "Please log in and unlock Bitwarden first with:"
-    echo "  bw login"
-    echo "  export BW_SESSION=\$(bw unlock --raw)"
-    exit 1
-fi
+# Iterate through bitwarden secret configurations
+{{ range $section, $data := .secrets.bitwarden }}
+  {{ if $data }}
+    echo {{ $data }}
+    # {{ $sectionPath := replace $section "." "/" }}
+    # {{ $noteName := replace $section "/" "." }}
+    # mkdir -p "$SECRETS_DIR/{{ $sectionPath }}"
 
-# Config file location
-CONFIG_FILE="${HOME}/.config/chezmoi/secrets.toml"
+    # # Get Bitwarden item
+    # if ! item=$(bw get item "{{ $noteName }}" 2>/dev/null); then
+    #   echo "Note '{{ $noteName }}' not found" >> "$SECRETS_DIR/{{ $sectionPath }}/$LOG_FILE"
+    #   continue
+    # fi
 
-if [ ! -f "$CONFIG_FILE" ]; then
-    echo "Error: Config file not found at $CONFIG_FILE"
-    exit 1
-fi
+    # # Extract item ID
+    # item_id=$(echo "$item" | jq -r '.id')
 
-# Base directory for storing secrets
-SECRET_DIR="${HOME}/.secret"
-mkdir -p "$SECRET_DIR"
-
-# Function to extract array values from a TOML string
-extract_array_values() {
-    local array_str="$1"
-    # Remove brackets and split by commas
-    local values=$(echo "$array_str" | sed 's/^\[//;s/\]$//;s/, / /g;s/,/ /g')
-    # Remove quotes from each value
-    echo "$values" | sed 's/"//g;s/'"'"'//g'
-}
-
-# Function to parse the TOML file and extract sections with files
-parse_config_and_download() {
-    local current_section=""
-
-    while IFS= read -r line; do
-        # Skip comments and empty lines
-        [[ "$line" =~ ^#.*$ || "$line" =~ ^[[:space:]]*$ ]] && continue
-
-        # Check if this is a section header
-        if [[ "$line" =~ ^\[secrets\.bitwarden\.([^\]]+)\]$ ]]; then
-            current_section="${BASH_REMATCH[1]}"
-            mkdir -p "$SECRET_DIR/bitwarden/$current_section"
-
-        # Check if this is a files array
-        elif [[ "$line" =~ ^[[:space:]]*files[[:space:]]*=[[:space:]]*\[(.*)\]$ ]]; then
-            # Extract files from the array
-            local files_array="${BASH_REMATCH[1]}"
-            local files=($(extract_array_values "$files_array"))
-
-            # Process each file
-            for file in "${files[@]}"; do
-                # Skip empty values
-                [[ -z "$file" ]] && continue
-
-                echo "Downloading $file for section $current_section..."
-
-                # Generate the note name (e.g., "base.ssh" from "base/ssh")
-                note_name=$(echo "$current_section" | sed 's/\//./')
-
-                # Create directory for the file if it doesn't exist
-                mkdir -p "$SECRET_DIR/bitwarden/$current_section"
-
-                # Get the item ID
-                item_id=$(bw get item "$note_name" 2>/dev/null | $JQ_CMD -r '.id' 2>/dev/null)
-
-                if [ -z "$item_id" ] || [ "$item_id" == "null" ]; then
-                    echo "  Error: Note $note_name not found in Bitwarden"
-                    continue
-                fi
-
-                # Download the attachment
-                if bw get attachment "$file" --itemid "$item_id" --output "$SECRET_DIR/bitwarden/$current_section/$file" 2>/dev/null; then
-                    echo "  Downloaded $file successfully."
-                    # Make sure the file has the right permissions
-                    chmod 600 "$SECRET_DIR/bitwarden/$current_section/$file"
-                else
-                    echo "  Failed to download $file. Make sure it exists as an attachment to the $note_name note."
-                fi
-            done
-        fi
-    done < "$CONFIG_FILE"
-}
-
-echo "Starting Bitwarden secrets pull..."
-parse_config_and_download
-echo "Bitwarden secrets pull completed!"
+    # # Process files
+    # {{ range $file := $data.files }}
+    #   if ! bw get attachment "${{ $file }}" --itemid "$item_id" --output "$SECRETS_DIR/{{ $sectionPath }}/{{ $file }}" &>/dev/null; then
+    #     echo "{{ $file }}" >> "$SECRETS_DIR/{{ $sectionPath }}/$LOG_FILE"
+    #   else
+    #     chmod 600 "$SECRETS_DIR/{{ $sectionPath }}/{{ $file }}"
+    #   fi
+    # {{ end }}
+  {{ end }}
+{{ end }}
