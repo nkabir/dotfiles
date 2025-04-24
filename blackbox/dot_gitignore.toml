@@ -1,0 +1,5 @@
+# home folder gitignore
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+# never check in content of secrets folder
+.secrets
