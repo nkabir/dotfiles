@@ -1,24 +1,93 @@
-# dot_secret/bw-pull.sh.tmpl
-#!/usr/bin/env bash
-set -eo pipefail
+#!/bin/bash
+# ChezMoi template for Bitwarden pull script
+# This script pulls attachments from Bitwarden notes and organizes them in ~/.secrets
 
-# Initialize environment
-SECRETS_DIR="$HOME/.secrets/bitwarden"
-LOG_FILE="missing.log"
+set -euo pipefail
 
-# if BW_SESSION not set, login to Bitwarden
-if [[ -z "$BW_SESSION" ]]; then
-  echo "BW_SESSION is not set. Please log into Bitwarden first."
+MKDIR_CMD="mkdir -p"
+RM_CMD="rm -f"
+
+# Base directory for secrets
+SECRETS_DIR="$HOME/.secrets"
+$MKDIR_CMD "$SECRETS_DIR"
+
+# Ensure bw is logged in
+if ! bw status | grep -q "unlocked"; then
+  echo "Please unlock Bitwarden first with: bw unlock"
   exit 1
 fi
 
-# Delete existing log files
-find "$SECRETS_DIR" -name "$LOG_FILE" -delete
+bw sync
 
-# Iterate through bitwarden secret configurations
-{{ range $section, $data := .secrets.bitwarden }}
-  {{ if $data }}
-    echo {{ $data }}
-    echo {{ $section }}
+# Function to get attachment from a note
+get_attachment() {
+  local section="$1"
+  local subsection="$2"
+  local subsubsection="$3"
+  local filename="$4"
+  local note_name="${subsection}.${subsubsection}"
+  local target_dir="$SECRETS_DIR/$section/$subsection/$subsubsection"
+  local log_file="$target_dir/.log"
+
+  # Create target directory
+  $MKDIR_CMD "$target_dir"
+
+  # Get the item ID for the note
+  local item_id=$(bw get item "$note_name" --raw | jq -r '.id')
+
+  if [ -z "$item_id" ] || [ "$item_id" == "null" ]; then
+    echo "Note $note_name not found in Bitwarden"
+    echo "Missing note: $note_name" >> "$log_file"
+    return 1
+  fi
+
+  # Get attachments for the note
+  local attachments=$(bw get item "$note_name" --raw | jq -r '.attachments')
+
+  if [ -z "$attachments" ] || [ "$attachments" == "null" ]; then
+    echo "No attachments found for note $note_name"
+    echo "Missing attachments for note: $note_name" >> "$log_file"
+    return 1
+  fi
+
+  # Find the specific attachment
+  local attachment_id=$(bw get item "$note_name" --raw | jq -r --arg filename "$filename" '.attachments[] | select(.fileName==$filename) | .id')
+
+  if [ -z "$attachment_id" ] || [ "$attachment_id" == "null" ]; then
+    echo "Attachment $filename not found for note $note_name"
+    echo "Missing attachment: $filename for note $note_name" >> "$log_file"
+    return 1
+  fi
+
+  # Download the attachment
+  echo "Downloading $filename from note $note_name to $target_dir/$filename"
+  bw get attachment "$attachment_id" --itemid "$item_id" --output "$target_dir/$filename"
+
+  if [ $? -ne 0 ]; then
+    echo "Failed to download attachment $filename from note $note_name"
+    echo "Failed download: $filename from note $note_name" >> "$log_file"
+    return 1
+  fi
+
+  return 0
+}
+
+# Process all secrets defined in the TOML file
+# Clean any existing log files before starting
+find "$SECRETS_DIR" -name ".log" -type f -exec $RM_CMD {} \;
+
+# Process bitwarden secrets
+{{ range $section, $sectionData := .secrets }}
+  echo "Processing section: {{ $section }}"
+  {{ range $subsection, $subsectionData := $sectionData }}
+    echo "  Processing subsection: {{ $subsection }}"
+    {{ range $subsubsection, $data := $subsectionData }}
+      echo "    Processing subsubsection: {{ $subsubsection }}"
+      {{ range $data.files }}
+        get_attachment "{{ $section }}" "{{ $subsection }}" "{{ $subsubsection }}" "{{ . }}"
+      {{ end }}
+    {{ end }}
   {{ end }}
 {{ end }}
+
+echo "Bitwarden pull complete. Check .log files in the secrets directories for any errors."
