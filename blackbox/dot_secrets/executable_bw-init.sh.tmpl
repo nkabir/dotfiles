@@ -67,9 +67,9 @@ create_note_if_not_exists() {
      			secureNote: {"type" : 0 }
 		}')
 	echo "$json_output" | bw encode | bw create item
-        echo "Note '$note_name' created."
+        echo "SecureNote '$note_name' created."
     else
-        echo "Note '$note_name' already exists."
+        echo "SecureNote '$note_name' already exists."
     fi
 }
 
