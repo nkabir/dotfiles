@@ -41,10 +41,12 @@ create_note_if_not_exists() {
     local files="$3"
 
     # Get folder ID
-    local folder_id=$(bw list folders --session "$SESSION_KEY" | jq -r ".[] | select(.name==\"$folder_name\") | .id")
+    local folder_id=$(bw list folders --session "$SESSION_KEY" | \
+			  jq -r ".[] | select(.name==\"$folder_name\") | .id")
 
     # Check if note exists
-    local note_id=$(bw list items --session "$SESSION_KEY" --folderid "$folder_id" | jq -r ".[] | select(.name==\"$note_name\") | .id")
+    local note_id=$(bw list items --session "$SESSION_KEY" \
+		       --folderid "$folder_id" | jq -r ".[] | select(.name==\"$note_name\") | .id")
 
     if [ -z "$note_id" ]; then
         echo "Creating note: $note_name in folder: $folder_name"
