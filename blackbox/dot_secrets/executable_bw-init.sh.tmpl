@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# bw-init.sh - Initialize Bitwarden with secrets from chezmoi
+# This script enumerates through all entries in the secrets.toml file
+# and creates corresponding notes in Bitwarden if they don't exist.
+
+set -euo pipefail
+
+# Ensure Bitwarden CLI is installed
+if ! command -v bw &> /dev/null; then
+    echo "Please install the Bitwarden CLI first."
+    exit 1
+fi
+
+# Check if user is logged in to Bitwarden
+SESSION_KEY="${BW_SESSION:-}"
+if [ -z "$SESSION_KEY" ]; then
+    echo "Please log in to Bitwarden first using 'bw login' and set the BW_SESSION environment variable."
+    echo "You can do this by running: export BW_SESSION=\$(bw unlock --raw)"
+    exit 1
+fi
+
+# Function to create a folder if it doesn't exist
+create_folder_if_not_exists() {
+    local folder_name="$1"
+
+    # Check if folder exists
+    local folder_id=$(bw list folders --session "$SESSION_KEY" | jq -r ".[] | select(.name==\"$folder_name\") | .id")
+
+    if [ -z "$folder_id" ]; then
+        echo "Creating folder: $folder_name"
+        bw create folder --session "$SESSION_KEY" --name "$folder_name" > /dev/null
+    else
+        echo "Folder '$folder_name' already exists."
+    fi
+}
+
+# Function to create a secure note if it doesn't exist
+create_note_if_not_exists() {
+    local folder_name="$1"
+    local note_name="$2"
+    local files="$3"
+
+    # Get folder ID
+    local folder_id=$(bw list folders --session "$SESSION_KEY" | jq -r ".[] | select(.name==\"$folder_name\") | .id")
+
+    # Check if note exists
+    local note_id=$(bw list items --session "$SESSION_KEY" --folderid "$folder_id" | jq -r ".[] | select(.name==\"$note_name\") | .id")
+
+    if [ -z "$note_id" ]; then
+        echo "Creating note: $note_name in folder: $folder_name"
+
+        # Prepare note content with files list
+        local content="Files to manage: $files"
+
+        # Create secure note
+        bw create item --session "$SESSION_KEY" \
+            --folderid "$folder_id" \
+            --name "$note_name" \
+            --notes "$content" \
+            --type 2 > /dev/null
+
+        echo "Note '$note_name' created."
+    else
+        echo "Note '$note_name' already exists."
+    fi
+}
+
+# Create the seed folder in Bitwarden
+create_folder_if_not_exists "seed"
+
+# Process entries from secrets.toml
+{{ range $section, $data := .secrets.bitwarden -}}
+{{ range $subsection, $subdata := $data -}}
+{{ if (index $subdata "files") -}}
+# Create note for {{ $section }}.{{ $subsection }}
+create_note_if_not_exists "seed" "{{ $section }}.{{ $subsection }}" "{{ index $subdata "files" | join ", " }}"
+{{ end -}}
+{{ end -}}
+{{ end -}}
+
+echo "Bitwarden initialization completed."
