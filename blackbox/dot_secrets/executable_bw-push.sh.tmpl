@@ -15,6 +15,8 @@ if ! bw status | grep -q "unlocked"; then
   exit 1
 fi
 
+bw sync
+
 # Function to push a file as an attachment to a note
 push_attachment() {
   local section="$1"
