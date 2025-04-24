@@ -52,13 +52,19 @@ create_note_if_not_exists() {
         # Prepare note content with files list
         local content="Files to manage: $files"
 
-        # Create secure note
-        bw create item --session "$SESSION_KEY" \
-            --folderid "$folder_id" \
-            --name "$note_name" \
-            --notes "$content" \
-            --type 2 > /dev/null
-
+	json_output=$(jq -n \
+		--arg type "2" \
+		--arg name "$note_name" \
+		--arg notes "$content" \
+		--arg folderId "$folder_id" \
+		'{
+			type: $type | tonumber,
+			name: $name,
+			notes: $notes,
+			folderId: $folderId,
+     			secureNote: {"type" : 0 }
+		}')
+	echo "$json_output" | bw encode | bw create item
         echo "Note '$note_name' created."
     else
         echo "Note '$note_name' already exists."
@@ -70,12 +76,14 @@ create_folder_if_not_exists "seed"
 
 # Process entries from secrets.toml
 {{ range $section, $data := .secrets.bitwarden -}}
-{{ range $subsection, $subdata := $data -}}
-{{ if (index $subdata "files") -}}
-# Create note for {{ $section }}.{{ $subsection }}
-create_note_if_not_exists "seed" "{{ $section }}.{{ $subsection }}" "{{ index $subdata "files" | join ", " }}"
-{{ end -}}
-{{ end -}}
+  {{ range $subsection, $subdata := $data -}}
+    {{ if (index $subdata "files") -}}
+      # Create note for {{ $section }}.{{ $subsection }}
+      create_note_if_not_exists "seed" \
+			"{{ $section }}.{{ $subsection }}" \
+			"{{ index $subdata "files" | join ", " }}"
+    {{ end -}}
+  {{ end -}}
 {{ end -}}
 
 echo "Bitwarden initialization completed."
