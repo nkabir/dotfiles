@@ -1,93 +1,115 @@
 #!/bin/bash
 # ChezMoi template for Bitwarden pull script
-# This script pulls attachments from Bitwarden notes and organizes them in ~/.secrets
+# This script pulls files from Bitwarden based on the configuration in secrets.toml
 
-set -euo pipefail
+# Exit on error
+set -e
 
-MKDIR_CMD="mkdir -p"
-RM_CMD="rm -f"
+# Set log file path
+LOG_DIR="{{ .chezmoi.homeDir }}/.secrets"
+LOG_FILE="${LOG_DIR}/bw-pull.log"
 
-# Base directory for secrets
-SECRETS_DIR="$HOME/.secrets"
-$MKDIR_CMD "$SECRETS_DIR"
+# Create log directory if it doesn't exist
+mkdir -p "${LOG_DIR}"
 
-# Ensure bw is logged in
-if ! bw status | grep -q "unlocked"; then
-  echo "Please unlock Bitwarden first with: bw unlock"
+# Clear previous log file
+echo "# Bitwarden Pull Log - $(date)" > "${LOG_FILE}"
+echo "-----------------------------------" >> "${LOG_FILE}"
+
+# Ensure Bitwarden is unlocked
+BW_STATUS=$(bw status | jq -r '.status')
+if [ "${BW_STATUS}" != "unlocked" ]; then
+  echo "Bitwarden is locked. Please unlock with 'bw unlock'"
   exit 1
 fi
 
-bw sync
+# Function to create directory if it doesn't exist
+create_dir() {
+  local dir="$1"
+  if [ ! -d "${dir}" ]; then
+    mkdir -p "${dir}"
+    echo "Created directory: ${dir}"
+  fi
+}
 
-# Function to get attachment from a note
+# Function to get attachment from Bitwarden
 get_attachment() {
-  local section="$1"
-  local subsection="$2"
-  local subsubsection="$3"
-  local filename="$4"
-  local note_name="${subsection}.${subsubsection}"
-  local target_dir="$SECRETS_DIR/$section/$subsection/$subsubsection"
-  local log_file="$target_dir/.log"
+  local note_name="$1"
+  local attachment_name="$2"
+  local output_dir="$3"
+  local output_file="${output_dir}/${attachment_name}"
+  local missing_file="${output_dir}/.missing.log"
 
-  # Create target directory
-  $MKDIR_CMD "$target_dir"
+  # Create output directory if it doesn't exist
+  create_dir "${output_dir}"
 
-  # Get the item ID for the note
-  local item_id=$(bw get item "$note_name" --raw | jq -r '.id')
+  # Clear missing file log at the beginning for this directory
+  if [ ! -f "${missing_file}" ]; then
+    touch "${missing_file}"
+  fi
 
-  if [ -z "$item_id" ] || [ "$item_id" == "null" ]; then
-    echo "Note $note_name not found in Bitwarden"
-    echo "Missing note: $note_name" >> "$log_file"
+  echo "Getting ${attachment_name} from ${note_name}..."
+
+  # Check if the note exists
+  NOTE_ID=$(bw get item "${note_name}" --raw 2>/dev/null || echo "")
+
+  if [ -z "${NOTE_ID}" ]; then
+    echo "ERROR: Note '${note_name}' not found in Bitwarden" | tee -a "${LOG_FILE}"
+    echo "${attachment_name}" >> "${missing_file}"
     return 1
   fi
 
-  # Get attachments for the note
-  local attachments=$(bw get item "$note_name" --raw | jq -r '.attachments')
+  # Get attachment ID from the note
+  ATTACHMENT_ID=$(echo "${NOTE_ID}" | jq -r ".attachments[] | select(.fileName==\"${attachment_name}\") | .id" 2>/dev/null || echo "")
 
-  if [ -z "$attachments" ] || [ "$attachments" == "null" ]; then
-    echo "No attachments found for note $note_name"
-    echo "Missing attachments for note: $note_name" >> "$log_file"
-    return 1
-  fi
-
-  # Find the specific attachment
-  local attachment_id=$(bw get item "$note_name" --raw | jq -r --arg filename "$filename" '.attachments[] | select(.fileName==$filename) | .id')
-
-  if [ -z "$attachment_id" ] || [ "$attachment_id" == "null" ]; then
-    echo "Attachment $filename not found for note $note_name"
-    echo "Missing attachment: $filename for note $note_name" >> "$log_file"
+  if [ -z "${ATTACHMENT_ID}" ]; then
+    echo "ERROR: Attachment '${attachment_name}' not found in note '${note_name}'" | tee -a "${LOG_FILE}"
+    echo "${attachment_name}" >> "${missing_file}"
     return 1
   fi
 
   # Download the attachment
-  echo "Downloading $filename from note $note_name to $target_dir/$filename"
-  bw get attachment "$attachment_id" --itemid "$item_id" --output "$target_dir/$filename"
+  bw get attachment "${ATTACHMENT_ID}" --itemid "$(echo "${NOTE_ID}" | jq -r '.id')" --output "${output_file}" > /dev/null
 
-  if [ $? -ne 0 ]; then
-    echo "Failed to download attachment $filename from note $note_name"
-    echo "Failed download: $filename from note $note_name" >> "$log_file"
+  if [ $? -eq 0 ]; then
+    echo "Successfully downloaded ${attachment_name} to ${output_file}"
+    # Remove from missing file if it exists
+    sed -i "/${attachment_name}/d" "${missing_file}"
+    return 0
+  else
+    echo "ERROR: Failed to download attachment '${attachment_name}'" | tee -a "${LOG_FILE}"
+    echo "${attachment_name}" >> "${missing_file}"
     return 1
   fi
-
-  return 0
 }
 
-# Process all secrets defined in the TOML file
-# Clean any existing log files before starting
-find "$SECRETS_DIR" -name ".log" -type f -exec $RM_CMD {} \;
+echo "Starting Bitwarden pull process..."
 
-# Process bitwarden secrets
-{{ range $section, $sectionData := .secrets }}
-  echo "Processing section: {{ $section }}"
-  {{ range $subsection, $subsectionData := $sectionData }}
-    echo "  Processing subsection: {{ $subsection }}"
-    {{ range $subsubsection, $data := $subsectionData }}
-      echo "    Processing subsubsection: {{ $subsubsection }}"
-      {{ range $data.files }}
-        get_attachment "{{ $section }}" "{{ $subsection }}" "{{ $subsubsection }}" "{{ . }}"
-      {{ end }}
-    {{ end }}
-  {{ end }}
-{{ end }}
+# Process secrets entries from ChezMoi data
+{{- range $category, $categoryData := .secrets }}
+echo "Processing category: {{ $category }}"
+{{- range $section, $sectionData := $categoryData }}
+{{- range $subsection, $subsectionData := $sectionData }}
+{{- if hasKey $subsectionData "files" }}
+  # Create base secrets directory for this section
+  SECRET_DIR="{{ $.chezmoi.homeDir }}/.secrets/{{ $category }}/{{ $section }}/{{ $subsection }}"
+  echo "Processing section: {{ $section }}.{{ $subsection }}"
 
-echo "Bitwarden pull complete. Check .log files in the secrets directories for any errors."
+  # Process each file in the section
+  {{- range $file := $subsectionData.files }}
+  get_attachment "{{ $section }}.{{ $subsection }}" "{{ $file }}" "${SECRET_DIR}"
+  {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+echo "Bitwarden pull process completed."
+
+# Check for any missing files
+if grep -q "ERROR" "${LOG_FILE}"; then
+  echo "There were errors during the pull process. Check ${LOG_FILE} for details."
+  exit 1
+fi
+
+exit 0
