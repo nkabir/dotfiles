@@ -19,26 +19,6 @@ find "$SECRETS_DIR" -name "$LOG_FILE" -delete
 {{ range $section, $data := .secrets.bitwarden }}
   {{ if $data }}
     echo {{ $data }}
-    # {{ $sectionPath := replace $section "." "/" }}
-    # {{ $noteName := replace $section "/" "." }}
-    # mkdir -p "$SECRETS_DIR/{{ $sectionPath }}"
-
-    # # Get Bitwarden item
-    # if ! item=$(bw get item "{{ $noteName }}" 2>/dev/null); then
-    #   echo "Note '{{ $noteName }}' not found" >> "$SECRETS_DIR/{{ $sectionPath }}/$LOG_FILE"
-    #   continue
-    # fi
-
-    # # Extract item ID
-    # item_id=$(echo "$item" | jq -r '.id')
-
-    # # Process files
-    # {{ range $file := $data.files }}
-    #   if ! bw get attachment "${{ $file }}" --itemid "$item_id" --output "$SECRETS_DIR/{{ $sectionPath }}/{{ $file }}" &>/dev/null; then
-    #     echo "{{ $file }}" >> "$SECRETS_DIR/{{ $sectionPath }}/$LOG_FILE"
-    #   else
-    #     chmod 600 "$SECRETS_DIR/{{ $sectionPath }}/{{ $file }}"
-    #   fi
-    # {{ end }}
+    echo {{ $section }}
   {{ end }}
 {{ end }}
