@@ -41,7 +41,10 @@ push_attachment() {
   fi
 
   # Check if attachment already exists
-  local existing_attachment_id=$(bw get item "$note_name" --raw | jq -r --arg filename "$filename" '.attachments[] | select(.fileName==$filename) | .id')
+  local existing_attachment_id=$(bw get item \
+				    "$note_name" --raw | \
+				     jq -r --arg filename "$filename" '.attachments[] | \
+				     select(.fileName==$filename) | .id')
 
   if [ -n "$existing_attachment_id" ] && [ "$existing_attachment_id" != "null" ]; then
     # Delete existing attachment

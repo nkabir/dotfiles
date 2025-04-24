@@ -60,7 +60,10 @@ get_attachment() {
   fi
 
   # Get attachment ID from the note
-  ATTACHMENT_ID=$(echo "${NOTE_ID}" | jq -r ".attachments[] | select(.fileName==\"${attachment_name}\") | .id" 2>/dev/null || echo "")
+  ATTACHMENT_ID=$(echo "${NOTE_ID}" | \
+		      jq -r ".attachments[] | \
+		      select(.fileName==\"${attachment_name}\") | \
+		       .id" 2>/dev/null || echo "")
 
   if [ -z "${ATTACHMENT_ID}" ]; then
     echo "ERROR: Attachment '${attachment_name}' not found in note '${note_name}'" | tee -a "${LOG_FILE}"
@@ -69,7 +72,9 @@ get_attachment() {
   fi
 
   # Download the attachment
-  bw get attachment "${ATTACHMENT_ID}" --itemid "$(echo "${NOTE_ID}" | jq -r '.id')" --output "${output_file}" > /dev/null
+  bw get attachment "${ATTACHMENT_ID}" \
+     --itemid "$(echo "${NOTE_ID}" | \
+     jq -r '.id')" --output "${output_file}" > /dev/null
 
   if [ $? -eq 0 ]; then
     echo "Successfully downloaded ${attachment_name} to ${output_file}"
