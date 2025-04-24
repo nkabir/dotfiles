@@ -19,6 +19,8 @@ if [ -z "$SESSION_KEY" ]; then
     exit 1
 fi
 
+bw sync
+
 # Function to create a folder if it doesn't exist
 create_folder_if_not_exists() {
     local folder_name="$1"
