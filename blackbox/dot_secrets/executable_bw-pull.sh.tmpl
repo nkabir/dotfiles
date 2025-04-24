@@ -23,6 +23,8 @@ if [ "${BW_STATUS}" != "unlocked" ]; then
   exit 1
 fi
 
+bw sync
+
 # Function to create directory if it doesn't exist
 create_dir() {
   local dir="$1"

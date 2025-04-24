@@ -46,6 +46,7 @@ push_attachment() {
 				     jq -r --arg filename "$filename" '.attachments[] | \
 				     select(.fileName==$filename) | .id')
 
+
   if [ -n "$existing_attachment_id" ] && [ "$existing_attachment_id" != "null" ]; then
     # Delete existing attachment
     echo "Deleting existing attachment $filename from note $note_name"
