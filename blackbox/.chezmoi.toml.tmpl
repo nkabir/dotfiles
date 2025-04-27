@@ -8,7 +8,9 @@
 # data here is merged with data defined in .chezmoidata and made
 # available to templates
 # ChezMoi Main Configuration
-{{- $email := promptStringOnce . "email" "Email address" -}}
+{{- $emailFree := promptStringOnce . "emailFree" "Email address hosted on free service" -}}
+{{- $emailCorp := promptStringOnce . "emailCorp" "Email address hosted on corp service" -}}
+
 {{- $operator :=
     output (joinPath .chezmoi.sourceDir
     "../common/scripts/get-full-name.py") -}}
@@ -29,7 +31,8 @@
 ###
 
 [data]
-  email = {{ $email | quote }}
+  email.free = {{ $emailFree | quote }}
+  email.corp = {{ $emailCorp | quote }}
   operator = {{ $operator | quote }} # full name of user e.g. Alice Smith
   exenv = {{ $exenv | quote }} # execution environment
   osId = {{ $osId | quote }}
