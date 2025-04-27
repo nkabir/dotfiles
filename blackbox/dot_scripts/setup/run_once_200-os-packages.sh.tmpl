@@ -9,13 +9,15 @@
 echo "Installing Ubuntu packages..."
 sudo apt update
 sudo apt install -y \
+     build-essential \
      ccze \
      dconf-cli \
-     molly-guard \
-     build-essential \
-     libssl-dev \
      libffi-dev \
-     python3-dev
+     libsecret-1-0 \
+     libssl-dev \
+     molly-guard \
+     python3-dev \
+     tilix
 
 sudo apt upgrade -y
 {{- else if .isAlmaLinux }}
@@ -26,10 +28,12 @@ sudo dnf install -y \
      ccze \
      dconf \
      gcc \
+     libffi-devel \
+     libsecret \
      make \
      openssl-devel \
-     libffi-devel \
      python3-devel \
+     tilix
 {{- else }}
 echo "Unknown OS, skipping package installation"
 {{- end }}
