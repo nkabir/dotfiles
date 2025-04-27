@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# This script loads Tilix configuration from the dconf file
+echo "Loading Tilix configuration..."
+
+# Check if the dconf file exists
+if [ -f "$HOME/.config/tilix/tilix.dconf" ]; then
+    # Load the Tilix configuration from the dconf file
+    dconf load /com/gexperts/Tilix/ < "$HOME/.config/tilix/tilix.dconf"
+    echo "Tilix configuration loaded successfully."
+else
+    echo "Error: Tilix dconf file not found at $HOME/.config/tilix/tilix.dconf"
+    exit 1
+fi
