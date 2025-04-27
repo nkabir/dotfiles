@@ -18,7 +18,10 @@ sudo apt install -y \
      libssl-dev \
      molly-guard \
      python3-dev \
-     tilix
+     tilix \
+     unzip \
+     wget \
+     zip
 
 sudo apt upgrade -y
 {{- else if .isAlmaLinux }}
@@ -35,7 +38,11 @@ sudo dnf install -y \
      make \
      openssl-devel \
      python3-devel \
-     tilix
+     tilix \
+     unzip \
+     wget \
+     zip
+
 {{- else }}
 echo "Unknown OS, skipping package installation"
 {{- end }}

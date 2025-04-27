@@ -27,19 +27,6 @@ FONT_NAMES=(
 
 echo "Installing Nerd Fonts version $NERD_FONTS_VERSION"
 
-# Ensure required tools are installed
-{{ if .isUbuntu -}}
-if ! command -v wget &> /dev/null || ! command -v unzip &> /dev/null; then
-    echo "Installing required packages..."
-    sudo apt-get update && sudo apt-get install -y wget unzip
-fi
-{{ else if .isAlmaLinux -}}
-if ! command -v wget &> /dev/null || ! command -v unzip &> /dev/null; then
-    echo "Installing required packages..."
-    sudo dnf install -y wget unzip
-fi
-{{ end }}
-
 # Download and install fonts
 for FONT_NAME in "${FONT_NAMES[@]}"; do
     echo "Downloading $FONT_NAME..."
