@@ -76,11 +76,13 @@
 #Mergetool can now be used to resolve the merge conflicts. You start it very easily with:
 #git mergetool
 [merge]
-    tool = meld
+	tool = vimdiff
 [mergetool "meld"]
     # Choose one of these 2 lines (not both!) explained below.
     cmd = meld "$LOCAL" "$MERGED" "$REMOTE" --output "$MERGED"
     # cmd = meld "$LOCAL" "$BASE" "$REMOTE" --output "$MERGED"
+[mergetool "vimdiff"]
+	cmd = vimdiff -c \"4split $MERGED\" \"$BASE\" \"$LOCAL\" \"$REMOTE\"
 
 [http]
 	sslVerify = false
