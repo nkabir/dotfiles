@@ -2,8 +2,8 @@
   user = {{ .chezmoi.username }}
 
 [user]
-  name = "Norman Kabir"
-  email = "nkabir@gmail.com"
+  name = {{ .operator }}
+  email = {{ .email.free }}
 
 [color]
   ui = auto

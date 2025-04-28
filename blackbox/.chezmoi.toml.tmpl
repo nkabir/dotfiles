@@ -35,10 +35,10 @@
   email.corp = {{ $emailCorp | quote }}
   operator = {{ $operator | quote }} # full name of user e.g. Alice Smith
   exenv = {{ $exenv | quote }} # execution environment
-  osId = {{ $osId | quote }}
-  osVersion = {{ $osVersion | quote }}
-  isUbuntu = {{ eq $osId "ubuntu" }}
-  isAlmaLinux = {{ eq $osId "almalinux" }}
+  osId = {{ $osId | quote }} # eg ubuntu
+  osVersion = {{ $osVersion | quote }} # eg 24.04
+  isUbuntu = {{ eq $osId "ubuntu" }} # Ubuntu flag
+  isAlmaLinux = {{ eq $osId "almalinux" }} # Alma flag
 
 [bitwarden]
   command = "bw"
