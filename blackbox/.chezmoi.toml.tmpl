@@ -11,6 +11,7 @@
 {{- $emailFree := promptStringOnce . "emailFree" "Email address hosted on free service" -}}
 {{- $emailCorp := promptStringOnce . "emailCorp" "Email address hosted on corp service" -}}
 
+# use common scripts to generate dynamic data
 {{- $operator :=
     output (joinPath .chezmoi.sourceDir
     "../common/scripts/get-full-name.py") -}}
