@@ -1,5 +1,6 @@
 # gpg.bash
 
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 gpg::create-key-pair() {
   local real_name="$1"
   local email="$2"
@@ -31,6 +32,7 @@ EOF
 }
 
 
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 gpg::delete-key-pair() {
     local email="$1"
     if [[ -z "$email" ]]; then
@@ -53,4 +55,16 @@ gpg::delete-key-pair() {
     echo "Verifying removal..."
     gpg --list-secret-keys "$email"
     gpg --list-keys "$email"
+}
+
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+gpg::export-private-key() {
+    local email="$1"
+    if [[ -z "$email" ]]; then
+        echo "Usage: gpg::export-armored-private-key <email-address>"
+        return 1
+    fi
+
+    gpg --armor --export-secret-keys "$email"
 }
