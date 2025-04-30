@@ -38,13 +38,13 @@ gpg::delete-key-pair() {
     fi
 
     echo "Deleting GPG secret key for: $email"
-    gpg --batch --yes --delete-secret-key "$email"
+    gpg --yes --delete-secret-keys "$email"
     if [[ $? -ne 0 ]]; then
         echo "Failed to delete secret key for $email (it may not exist)."
     fi
 
     echo "Deleting GPG public key for: $email"
-    gpg --batch --yes --delete-key "$email"
+    gpg --yes --delete-keys "$email"
     if [[ $? -ne 0 ]]; then
         echo "Failed to delete public key for $email (it may not exist)."
     fi
