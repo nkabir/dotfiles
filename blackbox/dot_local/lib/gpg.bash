@@ -75,3 +75,25 @@ gpg::export-public-key() {
 
     gpg --armor --export "$email"
 }
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+gpg::key-pair-exists() {
+    local email="$1"
+    if [[ -z "$email" ]]; then
+        echo "Usage: gpg::key-pair-exists <email-address>"
+        return 2
+    fi
+
+    # Check for public key
+    if ! gpg --list-keys "$email" &>/dev/null; then
+        return 1
+    fi
+
+    # Check for private key
+    if ! gpg --list-secret-keys "$email" &>/dev/null; then
+        return 1
+    fi
+
+    # Both keys exist
+    return 0
+}
