@@ -1,5 +1,3 @@
-# gpg.bash
-
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 gpg::create-key-pair() {
   local real_name="$1"
@@ -31,7 +29,6 @@ EOF
   rm -f "$batch_file"
 }
 
-
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 gpg::delete-key-pair() {
     local email="$1"
@@ -57,7 +54,6 @@ gpg::delete-key-pair() {
     gpg --list-keys "$email"
 }
 
-
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 gpg::export-private-key() {
     local email="$1"
@@ -67,4 +63,15 @@ gpg::export-private-key() {
     fi
 
     gpg --armor --export-secret-keys "$email"
+}
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+gpg::export-public-key() {
+    local email="$1"
+    if [[ -z "$email" ]]; then
+        echo "Usage: gpg::export-public-key <email-address>"
+        return 1
+    fi
+
+    gpg --armor --export "$email"
 }
