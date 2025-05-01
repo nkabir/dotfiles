@@ -7,6 +7,7 @@ BITWARDEN_HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
 
 . ${BITWARDEN_HERE:?}/logger.bash
 
+
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 bitwarden::is-unlocked() {
     local status=$(bw status | jq -r '.status')
@@ -26,10 +27,12 @@ fi
 # Check if user is logged in
 # bitwarden::is-unlocked || return $?
 
+
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 bitwarden::sync() {
     bw sync
 }
+
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 bitwarden::get-folder-id() {
@@ -44,12 +47,12 @@ bitwarden::get-folder-id() {
 
     if [[ -n "$folder_id" ]]; then
         echo "$folder_id"
-        return 0
-    else
-        logger::warn "No folder found with name '$folder_name'"
-        return 1
     fi
+
+    return 0
+
 }
+
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 bitwarden::item-exists() {
@@ -80,5 +83,45 @@ bitwarden::item-exists() {
             logger::error "Failed to extract Bitwarden item id for '$search_term'."
             return 1
         fi
+    fi
+}
+
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+bitwarden::ensure-folder() {
+    local folder_name="$1"
+    if [[ -z "$folder_name" ]]; then
+        logger::error "Usage: bitwarden::ensure-folder-exists "
+        return 1
+    fi
+
+    # Try to get the folder id
+    local folder_id
+    folder_id="$(bitwarden::get-folder-id "$folder_name")"
+    if [[ -n "$folder_id" ]]; then
+        echo "$folder_id"
+        return 0
+    fi
+
+    # Folder does not exist, create it
+    logger::info "Creating Bitwarden folder '$folder_name'"
+    local create_result
+    local folder_json=$(jq -n \
+			--arg name "$folder_name" \
+			      '{ name: $name }'
+    )
+    create_result="$(echo "$folder_json" | bw encode | bw create folder)"
+    if [[ $? -ne 0 ]]; then
+        logger::error "Failed to create Bitwarden folder '$folder_name': $create_result"
+        return 2
+    fi
+
+    folder_id="$(echo "$create_result" | jq -r '.id')"
+    if [[ -n "$folder_id" && "$folder_id" != "null" ]]; then
+        echo "$folder_id"
+        return 0
+    else
+        logger::error "Could not extract folder id after creation for '$folder_name'"
+        return 3
     fi
 }
