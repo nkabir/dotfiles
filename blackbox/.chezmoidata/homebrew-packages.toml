@@ -16,6 +16,7 @@ common = [
 "htop",
 "jq",
 "kcl-lang/tap/kcl",
+"lnav",
 "mani",
 "redo",
 "ripgrep",
