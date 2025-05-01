@@ -55,7 +55,7 @@ logger::log() {
 
     # Output to terminal
     if [[ "$LOGGER_OUTPUT" == "terminal" || "$LOGGER_OUTPUT" == "both" ]]; then
-        echo -e "${color}${formatted}${LOGGER_COLOR_RESET}" | ccze -A
+        echo -e "${color}${formatted}${LOGGER_COLOR_RESET}" | ccze -A >&2
     fi
 
     # Output to syslog (no color)
