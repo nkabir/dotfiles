@@ -5,6 +5,9 @@ YADM_HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" &> /dev/null && p
 . "${YADM_HERE:?}/logger.bash"
 . "${YADM_HERE:?}/gpg.bash"
 
+YADM_GPG_EMAIL="yadm@localhost"
+YADM_GPG_NAME="YADM Encryption"
+
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 yadm::gpg-id-exists() {
     local email="${YADM_GPG_EMAIL:?}"
@@ -24,7 +27,7 @@ yadm::delete-gpg-key() {
     local email="${YADM_GPG_EMAIL:?}"
     local fingerprint
     fingerprint="$(gpg::get-fingerprint "$email" 2>/dev/null)"
-    
+
     if [[ -n "$fingerprint" ]]; then
         logger::info "Deleting GPG key pair for '$email' (fingerprint: $fingerprint)"
         if gpg::delete-key-pair "$fingerprint"; then
