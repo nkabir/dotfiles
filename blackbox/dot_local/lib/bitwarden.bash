@@ -75,7 +75,6 @@ bitwarden::item-exists() {
         id="$(echo "$result" | jq -r '.id' 2>/dev/null)"
         if [[ -n "$id" && "$id" != "null" ]]; then
             echo "$id"
-            logger::info "Bitwarden item '$search_term' exists (id: $id)."
             return 0
         else
             logger::error "Failed to extract Bitwarden item id for '$search_term'."
