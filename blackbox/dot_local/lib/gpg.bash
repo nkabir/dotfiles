@@ -31,27 +31,35 @@ EOF
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 gpg::delete-key-pair() {
-    local email="$1"
-    if [[ -z "$email" ]]; then
-        echo "Usage: gpg::delete-key-pair-by-email <email-address>"
+    local fingerprint="$1"
+    if [[ -z "$fingerprint" ]]; then
+        echo "Usage: gpg::delete-key-pair "
         return 1
     fi
 
-    echo "Deleting GPG secret key for: $email"
-    gpg --yes --delete-secret-keys "$email"
-    if [[ $? -ne 0 ]]; then
-        echo "Failed to delete secret key for $email (it may not exist)."
+    # Check if the key pair exists
+    if ! gpg --list-keys "$fingerprint" &>/dev/null || ! gpg --list-secret-keys "$fingerprint" &>/dev/null; then
+        echo "Key pair with fingerprint $fingerprint does not exist."
+        return 1
     fi
 
-    echo "Deleting GPG public key for: $email"
-    gpg --yes --delete-keys "$email"
+    # Delete the key pair
+    echo "Deleting GPG secret key for: $fingerprint"
+    gpg --yes --delete-secret-keys "$fingerprint"
     if [[ $? -ne 0 ]]; then
-        echo "Failed to delete public key for $email (it may not exist)."
+        echo "Failed to delete secret key with fingerprint $fingerprint (it may not exist)."
     fi
 
+    echo "Deleting GPG public key for: $fingerprint"
+    gpg --yes --delete-keys "$fingerprint"
+    if [[ $? -ne 0 ]]; then
+        echo "Failed to delete public key with fingerprint $fingerprint (it may not exist)."
+    fi
+
+    # Verify removal
     echo "Verifying removal..."
-    gpg --list-secret-keys "$email"
-    gpg --list-keys "$email"
+    gpg --list-secret-keys "$fingerprint"
+    gpg --list-keys "$fingerprint"
 }
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
