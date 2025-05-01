@@ -1,11 +1,17 @@
+GPG_HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
+    &> /dev/null && pwd 2> /dev/null; )";
+
+. "$GPG_HERE/logger.bash"
+
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 gpg::create-key-pair() {
   local real_name="$1"
   local email="$2"
 
   if [[ -z "$real_name" || -z "$email" ]]; then
-    echo "Usage: gpg::create-key-pair \"Real Name\" \"email@example.com\""
-    return 1
+      # echo "Usage: gpg::create-key-pair \"Real Name\" \"email@example.com\""
+      logger::error "Usage: gpg::create-key-pair \"Real Name\" \"email@example.com\""
+      return 1
   fi
 
   # Create a temporary batch file for GPG key parameters
