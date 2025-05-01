@@ -37,3 +37,35 @@ yadm::delete-gpg-key() {
         logger::warn "No GPG key pair found for '$email'"
     fi
 }
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+yadm::export-gpg-keypair() {
+    local email="${YADM_GPG_EMAIL:?}"
+    local datetime
+    datetime="$(date '+%Y%m%d-%H%M%S')"
+    local pubfile="gpg-public-${email//[^a-zA-Z0-9]/_}-$datetime.asc"
+    local privfile="gpg-private-${email//[^a-zA-Z0-9]/_}-$datetime.asc"
+
+    if ! yadm::gpg-id-exists; then
+        logger::error "No GPG key found for '$email'. Aborting export."
+        return 1
+    fi
+
+    logger::info "Exporting public key for '$email' to '$pubfile'"
+    if gpg::export-public-key "$email" > "$pubfile"; then
+        logger::info "Public key exported to $pubfile"
+    else
+        logger::error "Failed to export public key for '$email'"
+        return 1
+    fi
+
+    logger::info "Exporting private key for '$email' to '$privfile'"
+    if gpg::export-private-key "$email" > "$privfile"; then
+        logger::info "Private key exported to $privfile"
+    else
+        logger::error "Failed to export private key for '$email'"
+        return 1
+    fi
+
+    logger::warn "Keep your private key file ($privfile) secure!"
+}
