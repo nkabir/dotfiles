@@ -45,13 +45,13 @@ gpg::delete-key-pair() {
 
     # Delete the key pair
     echo "Deleting GPG secret key for: $fingerprint"
-    gpg --yes --delete-secret-keys "$fingerprint"
+    gpg --yes --batch --delete-secret-keys "$fingerprint"
     if [[ $? -ne 0 ]]; then
         echo "Failed to delete secret key with fingerprint $fingerprint (it may not exist)."
     fi
 
     echo "Deleting GPG public key for: $fingerprint"
-    gpg --yes --delete-keys "$fingerprint"
+    gpg --yes --batch --delete-keys "$fingerprint"
     if [[ $? -ne 0 ]]; then
         echo "Failed to delete public key with fingerprint $fingerprint (it may not exist)."
     fi
