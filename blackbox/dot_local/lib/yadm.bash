@@ -72,3 +72,23 @@ yadm::export-gpg-keypair() {
 
     logger::warn "Keep your private key file ($privfile) secure!"
 }
+
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+yadm::create-gpg-keypair() {
+    local name="${YADM_GPG_NAME:?}"
+    local email="${YADM_GPG_EMAIL:?}"
+
+    if yadm::gpg-id-exists; then
+        logger::warn "GPG key for '$email' already exists. Aborting key creation."
+        return 1
+    fi
+
+    logger::info "Creating new GPG key pair for '$name '"
+    if gpg::create-key-pair "$name" "$email"; then
+        logger::info "Successfully created GPG key pair for '$email'"
+    else
+        logger::error "Failed to create GPG key pair for '$email'"
+        return 1
+    fi
+}
