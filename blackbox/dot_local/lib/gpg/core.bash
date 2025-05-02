@@ -1,3 +1,9 @@
+# gpg/core.bash
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# This script provides functions to manage GPG keys, including creating,
+# deleting, and exporting keys. It also includes a function to retrieve
+# the fingerprint of a GPG key associated with a given email address.
+
 GPG_HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
     &> /dev/null && pwd 2> /dev/null; )";
 
