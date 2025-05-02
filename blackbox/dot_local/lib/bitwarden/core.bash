@@ -2,21 +2,8 @@
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 # Bitwarden CLI script for Linux
 
-BITWARDEN_HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
-    &> /dev/null && pwd 2> /dev/null; )";
-
-. ${BITWARDEN_HERE:?}/../logger/core.bash
-
-
-# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
-bitwarden::is-unlocked() {
-    local status=$(bw status | jq -r '.status')
-    if [ "$status" != "unlocked" ]; then
-        logger::error "BitWarden is locked. Please login using 'bw login' or unlock with 'bw unlock'" 3
-        return 1
-    fi
-    return 0
-}
+[ -n "$_BITWARDEN_CORE" ] && return 0
+_BITWARDEN_CORE=1
 
 # Replace the initial checks with:
 if ! command -v bw &> /dev/null; then
@@ -24,136 +11,14 @@ if ! command -v bw &> /dev/null; then
     return 2
 fi
 
-# Check if user is logged in
-# bitwarden::is-unlocked || return $?
+BITWARDEN_HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
+    &> /dev/null && pwd 2> /dev/null; )";
 
+. ${BITWARDEN_HERE:?}/../logger/core.bash
+. ${BITWARDEN_HERE:?}/account.bash
+. ${BITWARDEN_HERE:?}/folder.bash
+. ${BITWARDEN_HERE:?}/item.bash
 
-# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
-bitwarden::sync() {
-    bw sync
-}
-
-
-# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
-bitwarden::read-folder() {
-    local folder_name="$1"
-    if [[ -z "$folder_name" ]]; then
-        logger::error "Usage: bitwarden::read-folder-by-name <folder_name>"
-        return 1
-    fi
-
-    local folder_id
-    folder_id="$(bw list folders | jq -r --arg name "$folder_name" '.[] | select(.name == $name) | .id')"
-
-    if [[ -n "$folder_id" ]]; then
-        echo "$folder_id"
-    fi
-
-    return 0
-
-}
-
-
-# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
-bitwarden::create-folder() {
-
-    local folder_name="$1"
-    if [[ -z "$folder_name" ]]; then
-        logger::error "Usage: bitwarden::create-folder-exists "
-        return 1
-    fi
-
-    # Try to get the folder id
-    local folder_id
-    folder_id="$(bitwarden::read-folder "$folder_name")"
-    if [[ -n "$folder_id" ]]; then
-        echo "$folder_id"
-        return 0
-    fi
-
-    # Folder does not exist, create it
-    logger::info "Creating Bitwarden folder '$folder_name'"
-    local create_result
-    local folder_json=$(jq -n \
-			--arg name "$folder_name" \
-			      '{ name: $name }'
-    )
-    create_result="$(echo "$folder_json" | bw encode | bw create folder)"
-    if [[ $? -ne 0 ]]; then
-        logger::error "Failed to create Bitwarden folder '$folder_name': $create_result"
-        return 2
-    fi
-
-    folder_id="$(echo "$create_result" | jq -r '.id')"
-    if [[ -n "$folder_id" && "$folder_id" != "null" ]]; then
-        echo "$folder_id"
-        return 0
-    else
-        logger::error "Could not extract folder id after creation for '$folder_name'"
-        return 3
-    fi
-}
-
-
-# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
-bitwarden::delete-folder() {
-    local folder_name="$1"
-    if [[ -z "$folder_name" ]]; then
-        logger::error "Usage: bitwarden::delete-folder <folder_name>"
-        return 1
-    fi
-
-    local folder_id
-    folder_id="$(bitwarden::read-folder "$folder_name")"
-    if [[ -z "$folder_id" ]]; then
-        logger::warn "Bitwarden folder '$folder_name' does not exist."
-        return 0
-    fi
-
-    logger::info "Deleting Bitwarden folder '$folder_name' (id: $folder_id)"
-    local result
-    result="$(bw delete folder "$folder_id" 2>&1)"
-    if [[ $? -eq 0 ]]; then
-        logger::info "Successfully deleted Bitwarden folder '$folder_name'"
-        return 0
-    else
-        logger::error "Failed to delete Bitwarden folder '$folder_name': $result"
-        return 2
-    fi
-}
-
-
-# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
-bitwarden::read-item() {
-    local search_term="$1"
-    if [[ -z "$search_term" ]]; then
-        logger::error "Usage: bitwarden::read-item <search_term>"
-        return 1
-    fi
-
-    local result
-    result="$(bw get item "$search_term" 2>&1)"
-    if [[ "$result" == "Not found."* ]]; then
-        logger::debug "Bitwarden item '$search_term' not found."
-        return 1
-    elif [[ "$result" == *"More than one result"* ]]; then
-        logger::warn "Multiple Bitwarden items found for '$search_term', refusing to return ambiguous id."
-        return 1
-    elif [[ "$result" == "You must unlock your vault"* ]]; then
-        logger::error "Bitwarden vault is locked. Please unlock before continuing."
-        return 2
-    else
-        local id
-        id="$(echo "$result" | jq -r '.id' 2>/dev/null)"
-        if [[ -n "$id" && "$id" != "null" ]]; then
-            echo "$id"
-            return 0
-        else
-            logger::error "Failed to extract Bitwarden item id for '$search_term'."
-            return 1
-        fi
-    fi
-}
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 bitwarden::create-note() {

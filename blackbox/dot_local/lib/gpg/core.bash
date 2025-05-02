@@ -4,6 +4,9 @@
 # deleting, and exporting keys. It also includes a function to retrieve
 # the fingerprint of a GPG key associated with a given email address.
 
+[ -n "$_GPG_CORE" ] && return 0
+_GPG_CORE=1
+
 GPG_HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
     &> /dev/null && pwd 2> /dev/null; )";
 

@@ -1,5 +1,11 @@
 # yadm.bash
-# yadm - Yet Another Dotfiles Manager
+#
+# YADM - Yet Another Dotfiles Manager
+#
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+[ -n "$_YADM_CORE" ] && return 0
+_YADM_CORE=1
+
 YADM_HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" &> /dev/null && pwd 2> /dev/null; )";
 
 . "${YADM_HERE:?}/logger.bash"
