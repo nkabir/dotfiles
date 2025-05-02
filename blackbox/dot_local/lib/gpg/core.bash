@@ -12,6 +12,24 @@ GPG_HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
 
 . "${GPG_HERE:?}/../logger/core.bash"
 
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+gpg::id() {
+    local email="$1"
+    if [[ -z "$email" ]]; then
+        echo "Usage: gpg::fingerprint "
+        return 1
+    fi
+
+    gpg --with-colons --fingerprint "$email" | awk -F: '/^fpr:/ {print $10; exit}'
+}
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+gpg::list() {
+
+    gpg --list-secret-keys --with-colons | awk -F'[<>]' '/^uid:/ {print $2}'
+}
+
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 gpg::create() {
   local real_name="$1"
@@ -43,38 +61,6 @@ EOF
   rm -f "$batch_file"
 }
 
-# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
-gpg::delete() {
-    local fingerprint="$1"
-    if [[ -z "$fingerprint" ]]; then
-        echo "Usage: gpg::delete "
-        return 1
-    fi
-
-    # Check if the key pair exists
-    if ! gpg --list-keys "$fingerprint" &>/dev/null || ! gpg --list-secret-keys "$fingerprint" &>/dev/null; then
-        echo "Key pair with fingerprint $fingerprint does not exist."
-        return 1
-    fi
-
-    # Delete the key pair
-    echo "Deleting GPG secret key for: $fingerprint"
-    gpg --yes --batch --delete-secret-keys "$fingerprint"
-    if [[ $? -ne 0 ]]; then
-        echo "Failed to delete secret key with fingerprint $fingerprint (it may not exist)."
-    fi
-
-    echo "Deleting GPG public key for: $fingerprint"
-    gpg --yes --batch --delete-keys "$fingerprint"
-    if [[ $? -ne 0 ]]; then
-        echo "Failed to delete public key with fingerprint $fingerprint (it may not exist)."
-    fi
-
-    # Verify removal
-    echo "Verifying removal..."
-    gpg --list-secret-keys "$fingerprint"
-    gpg --list-keys "$fingerprint"
-}
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 gpg::export-private() {
@@ -96,15 +82,4 @@ gpg::export-public() {
     fi
 
     gpg --armor --export "$email"
-}
-
-# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
-gpg::fingerprint() {
-    local email="$1"
-    if [[ -z "$email" ]]; then
-        echo "Usage: gpg::fingerprint "
-        return 1
-    fi
-
-    gpg --with-colons --fingerprint "$email" | awk -F: '/^fpr:/ {print $10; exit}'
 }
