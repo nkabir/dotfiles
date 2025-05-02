@@ -33,6 +33,25 @@ EOF
 
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+bitwarden::note::id() {
+
+    local note_name="$1"
+    if [[ -z "$note_name" ]]; then
+        logger::error "Usage: bitwarden::note::id <note_name>"
+        return 1
+    fi
+
+    # Get the item ID by note name
+    local item_id
+    item_id="$(bitwarden::item::id "$note_name")"
+    if [[ -n "$item_id" ]]; then
+	echo "$item_id"
+	return 0
+    fi
+}
+
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 bitwarden::note::create() {
     local note_name="$1"
     local folder_name="$2"
