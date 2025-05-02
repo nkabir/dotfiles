@@ -7,15 +7,15 @@
 GPG_HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
     &> /dev/null && pwd 2> /dev/null; )";
 
-. "${GPG_HERE:?}/logger.bash"
+. "${GPG_HERE:?}/../logger/core.bash"
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
-gpg::create-key-pair() {
+gpg::create() {
   local real_name="$1"
   local email="$2"
 
   if [[ -z "$real_name" || -z "$email" ]]; then
-      logger::error "Usage: gpg::create-key-pair \"Real Name\" \"email@example.com\""
+      logger::error "Usage: gpg::create \"Real Name\" \"email@example.com\""
       return 1
   fi
 
@@ -41,10 +41,10 @@ EOF
 }
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
-gpg::delete-key-pair() {
+gpg::delete() {
     local fingerprint="$1"
     if [[ -z "$fingerprint" ]]; then
-        echo "Usage: gpg::delete-key-pair "
+        echo "Usage: gpg::delete "
         return 1
     fi
 
@@ -74,7 +74,7 @@ gpg::delete-key-pair() {
 }
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
-gpg::export-private-key() {
+gpg::export-private() {
     local email="$1"
     if [[ -z "$email" ]]; then
         echo "Usage: gpg::export-armored-private-key <email-address>"
@@ -85,10 +85,10 @@ gpg::export-private-key() {
 }
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
-gpg::export-public-key() {
+gpg::export-public() {
     local email="$1"
     if [[ -z "$email" ]]; then
-        echo "Usage: gpg::export-public-key <email-address>"
+        echo "Usage: gpg::export-public <email-address>"
         return 1
     fi
 
@@ -96,10 +96,10 @@ gpg::export-public-key() {
 }
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
-gpg::get-fingerprint() {
+gpg::fingerprint() {
     local email="$1"
     if [[ -z "$email" ]]; then
-        echo "Usage: gpg::get-fingerprint "
+        echo "Usage: gpg::fingerprint "
         return 1
     fi
 

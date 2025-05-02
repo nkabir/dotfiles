@@ -1,4 +1,8 @@
-#!/usr/bin/env bash
+# logger/core.bash
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+[ -n "$_LOGGER_CORE" ] && return 0
+_LOGGER_CORE=1
 
 # logger::config
 # Set these variables to control output
