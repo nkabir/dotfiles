@@ -83,3 +83,38 @@ gpg::export-public() {
 
     gpg --armor --export "$email"
 }
+
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+gpg::delete() {
+    local email="$1"
+    if [[ -z "$email" ]]; then
+        logger::error "Usage: gpg::delete-key-pair <email-address>"
+        return 1
+    fi
+
+    # Get fingerprint of the key for the given email
+    local fingerprint
+    fingerprint="$(gpg::id "$email")"
+    if [[ -z "$fingerprint" ]]; then
+        logger::warn "No GPG key found for email: $email"
+        return 0
+    fi
+
+    logger::info "Deleting secret key for $email (fingerprint: $fingerprint)"
+    # Delete secret key (private key)
+    if ! echo "y" | gpg --batch --yes --delete-secret-key "$fingerprint"; then
+        logger::error "Failed to delete secret key for $email"
+        return 1
+    fi
+
+    logger::info "Deleting public key for $email (fingerprint: $fingerprint)"
+    # Delete public key
+    if ! echo "y" | gpg --batch --yes --delete-key "$fingerprint"; then
+        logger::error "Failed to delete public key for $email"
+        return 1
+    fi
+
+    logger::info "Successfully deleted GPG key pair for $email"
+    return 0
+}
