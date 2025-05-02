@@ -19,3 +19,4 @@ BITWARDEN_HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
 . ${BITWARDEN_HERE:?}/folder.bash
 . ${BITWARDEN_HERE:?}/item.bash
 . ${BITWARDEN_HERE:?}/note.bash
+. ${BITWARDEN_HERE:?}/attachment.bash

@@ -6,6 +6,7 @@
 _BITWARDEN_NOTE=1
 
 
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 bitwarden::note::json() {
     local name="$1"
     local folder_id="$2"
@@ -83,5 +84,34 @@ bitwarden::note::create() {
     else
         logger::error "Failed to create note '$note_name': $result"
         return 3
+    fi
+}
+
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+bitwarden::note::delete() {
+    local note_name="$1"
+    if [[ -z "$note_name" ]]; then
+        logger::error "Usage: bitwarden::note::delete <note_name>"
+        return 1
+    fi
+
+    # Get the item ID by note name
+    local item_id
+    item_id="$(bitwarden::note::id "$note_name")"
+    if [[ -z "$item_id" ]]; then
+        logger::warn "Note named '$note_name' not found."
+        return 0
+    fi
+
+    # Delete the item by ID
+    local result
+    result="$(bw delete item "$item_id" 2>&1)"
+    if [[ $? -eq 0 ]]; then
+        logger::info "Successfully deleted note '$note_name' (id: $item_id)"
+        return 0
+    else
+        logger::error "Failed to delete note '$note_name': $result"
+        return 2
     fi
 }
