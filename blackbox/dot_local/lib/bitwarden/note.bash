@@ -45,7 +45,7 @@ bitwarden::note::create() {
 
     # Ensure folder exists and get its ID
     local folder_id
-    folder_id="$(bitwarden::folder::create "$folder_name")"
+    folder_id="$(bitwarden::folder::id "$folder_name")"
     if [[ -z "$folder_id" ]]; then
         logger::error "Failed to get or create folder '$folder_name'"
         return 2
@@ -53,13 +53,7 @@ bitwarden::note::create() {
 
     # Prepare note JSON
     local note_json
-    note_json=$(jq -n \
-        --arg type "2" \
-        --arg name "$note_name" \
-        --arg notes "$note_content" \
-        --arg folderId "$folder_id" \
-        '{type: ($type | tonumber), secureNote: { type: 0}, name: $name, notes: $notes, folderId: $folderId}'
-    )
+    note_json="$(bitwarden::note::json "$note_name" "$folder_id" "$note_content")"
 
     # Create note
     local result

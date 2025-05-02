@@ -22,7 +22,7 @@ EOF
 
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
-bitwarden::folder::read() {
+bitwarden::folder::id() {
 
     local folder_name="$1"
     if [[ -z "$folder_name" ]]; then
@@ -52,7 +52,7 @@ bitwarden::folder::create() {
 
     # Try to get the folder id
     local folder_id
-    folder_id="$(bitwarden::folder::read "$folder_name")"
+    folder_id="$(bitwarden::folder::id "$folder_name")"
     if [[ -n "$folder_id" ]]; then
         echo "$folder_id"
         return 0
@@ -89,7 +89,7 @@ bitwarden::folder::delete() {
     fi
 
     local folder_id
-    folder_id="$(bitwarden::folder::read "$folder_name")"
+    folder_id="$(bitwarden::folder::id "$folder_name")"
     if [[ -z "$folder_id" ]]; then
         logger::warn "Bitwarden folder '$folder_name' does not exist."
         return 0
