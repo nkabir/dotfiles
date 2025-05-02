@@ -97,3 +97,43 @@ bitwarden::attachment::create() {
         return 5
     fi
 }
+
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+bitwarden::attachment::delete() {
+    local note_name="$1"
+    local attachment_name="$2"
+
+    if [[ -z "$note_name" || -z "$attachment_name" ]]; then
+        logger::error "Usage: bitwarden::note::delete-attachment <note_name> <attachment_name>"
+        return 1
+    fi
+
+    # Get the item ID by note name
+    local item_id
+    item_id="$(bitwarden::note::id "$note_name")"
+    if [[ -z "$item_id" ]]; then
+        logger::warn "Note named '$note_name' not found."
+        return 0
+    fi
+
+    # List attachments for the item and find the attachment ID by name
+    local attachment_id
+    attachment_id=$(bitwarden::attachment::id "$note_name" "$attachment_name")
+
+    if [[ -z "$attachment_id" ]]; then
+        logger::info "Attachment '$attachment_name' not found on note '$note_name'. Nothing to delete."
+        return 0
+    fi
+
+    # Delete the attachment by ID
+    local result
+    result="$(bw delete attachment "$attachment_id" --itemid "$item_id" 2>&1)"
+    if [[ $? -eq 0 ]]; then
+        logger::info "Successfully deleted attachment '$attachment_name' from note '$note_name' (attachment id: $attachment_id)"
+        return 0
+    else
+        logger::error "Failed to delete attachment '$attachment_name' from note '$note_name': $result"
+        return 2
+    fi
+}
