@@ -31,7 +31,6 @@ yadm::gpg::init() {
 }
 
 
-
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 # yadm::gpg::export
 # export the keypair to files
@@ -80,8 +79,42 @@ yadm::gpg::export() {
 }
 
 
-
-
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 # yadm::gpg::import
 # import the keypair from files
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+yadm::gpg::import() {
+    local export_dir="${YADM_HOME:-$HOME/.local/share/yadm}/gpg-keys"
+    local email_safe=$(echo "$YADM_GPG_EMAIL" | tr '@' '_')
+
+    # Define file paths using current symlinks
+    local private_file="${export_dir}/${email_safe}-current-private.asc"
+    local public_file="${export_dir}/${email_safe}-current-public.asc"
+
+    # Verify both key files exist
+    if [[ ! -f "$private_file" ]]; then
+        logger::error "Missing private key file: $private_file"
+        return 1
+    fi
+    if [[ ! -f "$public_file" ]]; then
+        logger::error "Missing public key file: $public_file"
+        return 1
+    fi
+
+    # Import private key
+    logger::info "Importing private key from $private_file"
+    if ! gpg --import "$private_file"; then
+        logger::error "Failed to import private key"
+        return 1
+    fi
+
+    # Import public key
+    logger::info "Importing public key from $public_file"
+    if ! gpg --import "$public_file"; then
+        logger::error "Failed to import public key"
+        return 1
+    fi
+
+    logger::info "Successfully imported GPG key pair for $YADM_GPG_EMAIL"
+    return 0
+}
