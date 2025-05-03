@@ -10,9 +10,32 @@ YADM_HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" &> /dev/null && p
 
 . "${YADM_HERE:?}/../logger/core.bash"
 . "${YADM_HERE:?}/../gpg/core.bash"
+. "${YADM_HERE:?}/../bitwarden/core.bash"
+. "${YADM_HERE:?}/bitwarden.bash"
+. "${YADM_HERE:?}/gpg.bash"
 
-YADM_GPG_EMAIL="yadm@localhost"
-YADM_GPG_NAME="YADM Encryption"
+YADM_GPG_EMAIL="yadm@secrets.github.com"
+YADM_GPG_NAME="YADM Secrets"
+
+
+# init
+# yadm::bitwarden::init
+# yadm::gpg::init
+
+# restore
+# yadm::bitwarden::restore
+# yadm::gpg::restore
+
+# backup
+# yadm::gpg::backup
+# yadm::bitwarden::backup
+
+# reset
+# delete local gpg keypair
+
+# encrypt
+
+# decrypt
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 yadm::gpg-id-exists() {

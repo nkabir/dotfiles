@@ -6,14 +6,15 @@ _YADM_GPG=1
 
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
-# yadm::bitwarden::init
+# yadm::gpg::init
+# create a new keypair in gpg
 
-# yadm::bitwarden::restore
-# download attachments from secrets.github.com
-# load them into gpg
-# delete ascii-armored files
 
-# yadm::bitwarden::backup
-# export keypair for yadm@secrets.github.com
-# upload attachments to secrets.github.com
-# delete ascii-armored files
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# yadm::gpg::backup
+# export the keypair to files
+
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# yadm::gpg::restore
+# import the keypair from files
