@@ -7,7 +7,7 @@ _YADM_GPG=1
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 # yadm::gpg::init
-# create a new keypair in gpg
+# create a new keypair in gpg with email yadm@secrets.github.com if it does not exist
 
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
