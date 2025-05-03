@@ -39,7 +39,7 @@ yadm::bitwarden::init() {
 
 
 # yadm::bitwarden::restore
-# download attachments from secrets.github.com
+# download current attachments from secrets.github.com
 
 # yadm::bitwarden::backup
 # upload attachments to secrets.github.com
