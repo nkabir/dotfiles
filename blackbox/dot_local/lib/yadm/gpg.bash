@@ -33,10 +33,10 @@ yadm::gpg::init() {
 
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
-# yadm::gpg::backup
+# yadm::gpg::export
 # export the keypair to files
 
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
-# yadm::gpg::restore
+# yadm::gpg::import
 # import the keypair from files
