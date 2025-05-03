@@ -8,8 +8,8 @@ _YADM_CORE=1
 
 YADM_HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" &> /dev/null && pwd 2> /dev/null; )";
 
-. "${YADM_HERE:?}/logger.bash"
-. "${YADM_HERE:?}/gpg.bash"
+. "${YADM_HERE:?}/../logger/core.bash"
+. "${YADM_HERE:?}/../gpg/core.bash"
 
 YADM_GPG_EMAIL="yadm@localhost"
 YADM_GPG_NAME="YADM Encryption"

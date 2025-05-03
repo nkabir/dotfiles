@@ -14,6 +14,31 @@ GPG_HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
 
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+gpg::init() {
+
+    # Check if gpg is installed
+    if ! command -v gpg &> /dev/null; then
+	yadm::log::error "gpg is not installed. Please install it to use yadm."
+	return 1
+    fi
+
+    # Check if gpg-agent is running
+    if ! pgrep -x "gpg-agent" > /dev/null; then
+	yadm::log::error "gpg-agent is not running. Please start it to use yadm."
+	return 1
+    fi
+
+    # Check if gpg is configured for SSH
+    if ! gpgconf --list-dirs agent-ssh-socket > /dev/null; then
+	yadm::log::error "gpg is not configured for SSH. Please configure it to use yadm."
+	return 1
+    fi
+
+    return 0
+}
+
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 gpg::id() {
     local email="$1"
     if [[ -z "$email" ]]; then
