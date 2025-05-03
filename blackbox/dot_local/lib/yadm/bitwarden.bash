@@ -21,7 +21,8 @@ yadm::bitwarden::init() {
     # Create secrets.github.com note if needed
     # check if bitwarden::note::id "secrets.github.com" exists
     # if not, create it
-    local note_id=$(bitwarden::note::id "secrets.github.com")
+    local note_id=
+    note_id=$(bitwarden::note::id "secrets.github.com")
     if [[ -z $note_id ]]; then
         logger::info "Creating 'secrets.github.com' secure note"
         if ! bitwarden::note::create "secrets.github.com" "yadm" "Managed with scripts. Do not edit."; then
