@@ -115,3 +115,50 @@ bitwarden::note::delete() {
         return 2
     fi
 }
+
+
+# In blackbox/dot_local/lib/bitwarden/note.bash
+
+# Add after the bitwarden::note::delete function
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+bitwarden::note::move() {
+    local note_name="$1"
+    local folder_name="$2"
+
+    if [[ -z "$note_name" || -z "$folder_name" ]]; then
+        logger::error "Usage: bitwarden::note::move <note_name> <folder_name>"
+        return 1
+    fi
+
+    # Get note ID
+    local item_id
+    item_id="$(bitwarden::note::id "$note_name")"
+    if [[ -z "$item_id" ]]; then
+        logger::error "Note '$note_name' not found"
+        return 2
+    fi
+
+    # Get folder ID
+    local folder_id
+    folder_id="$(bitwarden::folder::id "$folder_name")"
+    if [[ -z "$folder_id" ]]; then
+        logger::error "Folder '$folder_name' not found"
+        return 3
+    fi
+
+    # Get current item JSON and update folderId
+    local updated_json
+    if ! updated_json=$(bw get item "$item_id" | jq --arg fid "$folder_id" '.folderId = $fid'); then
+        logger::error "Failed to update folder ID in note JSON"
+        return 4
+    fi
+
+    # Apply changes
+    if echo "$updated_json" | bw encode | bw edit item "$item_id" >/dev/null 2>&1; then
+        logger::info "Moved note '$note_name' to folder '$folder_name'"
+        return 0
+    else
+        logger::error "Failed to update note '$note_name'"
+        return 5
+    fi
+}
