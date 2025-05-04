@@ -162,3 +162,32 @@ bitwarden::note::move() {
         return 5
     fi
 }
+
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+bitwarden::note::list() {
+    local note_name="$1"
+    if [[ -z "$note_name" ]]; then
+        logger::error "Usage: bitwarden::note::list-attachments <note-name>"
+        return 1
+    fi
+
+    # Get the item ID for the note name
+    local item_id
+    item_id="$(bitwarden::note::id "$note_name")"
+    if [[ -z "$item_id" ]]; then
+        logger::warn "Note named '$note_name' not found."
+        return 0
+    fi
+
+    # Get the item JSON and extract attachment file names
+    local attachments
+    attachments="$(bw get item "$item_id" | jq -r '.attachments[]?.fileName')"
+
+    if [[ -z "$attachments" ]]; then
+        logger::info "No attachments found for note '$note_name'."
+        return 0
+    fi
+
+    echo "$attachments"
+}
