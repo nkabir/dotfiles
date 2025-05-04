@@ -19,21 +19,30 @@ export YADM_GPG_NAME="YADM Secrets"
 
 
 
-# init
+# yadm::init
+# ---
 # yadm::bitwarden::init
 # yadm::gpg::init
 
-# restore
-# yadm::bitwarden::restore
-# yadm::gpg::restore
+# yadm::restore
+# ---
+# yadm::bitwarden::restore # download secrets from bitwarden
+# yadm::gpg::restore # loads secrets into gpg
 
-# backup
-# yadm::gpg::backup
-# yadm::bitwarden::backup
+# yadm::backup
+# ---
+# yadm::gpg::backup # writes secrets to asc files
+#  yadm-secrets.github.com.private.asc
+#  yadm-secrets.github.com.public.asc
+#  yadm-secrets.github.com.revoke.asc
+# yadm::bitwarden::backup # uploads secrets to bitwarden
 
-# reset
+# yadm::clean
+# ---
 # delete local gpg keypair
 
-# encrypt
+# yadm::encrypt
+# ---
 
-# decrypt
+# yadm::decrypt
+# ---

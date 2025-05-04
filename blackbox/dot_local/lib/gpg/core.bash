@@ -1,8 +1,15 @@
 # gpg/core.bash
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# GPG Key Management Functions
+#
 # This script provides functions to manage GPG keys, including creating,
 # deleting, and exporting keys. It also includes a function to retrieve
 # the fingerprint of a GPG key associated with a given email address.
+#
+#
+
+
+
 
 [ -n "$_GPG_CORE" ] && return 0
 _GPG_CORE=1
@@ -14,6 +21,7 @@ GPG_HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
 
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# Check if GPG is installed and configured for SSH
 gpg::init() {
 
     # Check if gpg is installed
@@ -39,7 +47,10 @@ gpg::init() {
 
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# Retrieve the GPG key fingerprint for a given email address
 gpg::id() {
+
+
     local email="$1"
     if [[ -z "$email" ]]; then
         echo "Usage: gpg::fingerprint "
@@ -49,13 +60,17 @@ gpg::id() {
     gpg --with-colons --fingerprint "$email" | awk -F: '/^fpr:/ {print $10; exit}'
 }
 
+
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# List all GPG keys
 gpg::list() {
 
     gpg --list-secret-keys --with-colons | awk -F'[<>]' '/^uid:/ {print $2}'
 }
 
+
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# Create a new GPG key pair
 gpg::create() {
   local real_name="$1"
   local email="$2"
@@ -88,6 +103,7 @@ EOF
 
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# Export the private key in armored format
 gpg::export-private() {
     local email="$1"
     if [[ -z "$email" ]]; then
@@ -98,7 +114,9 @@ gpg::export-private() {
     gpg --armor --export-secret-keys "$email"
 }
 
+
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# Export the public key in armored format
 gpg::export-public() {
     local email="$1"
     if [[ -z "$email" ]]; then
@@ -111,7 +129,9 @@ gpg::export-public() {
 
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# Delete a GPG key pair
 gpg::delete() {
+
     local email="$1"
     if [[ -z "$email" ]]; then
         logger::error "Usage: gpg::delete-key-pair <email-address>"
