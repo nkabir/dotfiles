@@ -106,3 +106,32 @@ bitwarden::folder::delete() {
         return 2
     fi
 }
+
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+bitwarden::folder::list() {
+    local folder_name="$1"
+    if [[ -z "$folder_name" ]]; then
+        logger::error "Usage: bitwarden::folder::list <folder-name>"
+        return 1
+    fi
+
+    # Get folder ID
+    local folder_id
+    folder_id="$(bitwarden::folder::id "$folder_name")"
+    if [[ -z "$folder_id" ]]; then
+        logger::error "Folder '$folder_name' not found"
+        return 2
+    fi
+
+    # List secure notes (type=2) in folder
+    local notes
+    notes=$(bw list items --folderid "$folder_id" | jq -r '.[] | select(.type == 2) | .name')
+
+    if [[ -z "$notes" ]]; then
+        logger::info "No secure notes found in folder '$folder_name'"
+        return 0
+    fi
+
+    echo "$notes"
+}
