@@ -3,6 +3,23 @@
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 # Add this function to gpg/core.bash or an appropriate gpg library file
 
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# Retrieve the GPG key fingerprint for a given email address
+gpg::primary::id() {
+
+
+    local email="$1"
+    if [[ -z "$email" ]]; then
+        echo "Usage: gpg::primary::id <email>"
+        return 1
+    fi
+
+    gpg --with-colons --fingerprint "$email" | awk -F: '/^fpr:/ {print $10; exit}'
+}
+
+
+
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 # gpg::primary::create
 # Creates a new GPG key pair given a real name and email
@@ -52,8 +69,19 @@ gpg::primary::delete() {
     return 1
   fi
 
+  # Check if the key exists
+  if ! gpg --list-keys "$uid" &>/dev/null; then
+    logger::error "GPG key with UID $uid not found."
+    return 1
+  fi
+
+  # Delete the key
+  # get the fingerprint of the key
+  local fingerprint
+  fingerprint=$(gpg::primary::id "$uid")
+
   logger::info "Deleting GPG secret key for UID: $uid"
-  gpg --batch --yes --delete-secret-key "$uid"
+  gpg --batch --yes --delete-secret-key "$fingerprint"
   logger::info "Deleting GPG public key for UID: $uid"
-  gpg --batch --yes --delete-key "$uid"
+  gpg --batch --yes --delete-key "$fingerprint"
 }

@@ -46,20 +46,6 @@ gpg::init() {
 }
 
 
-# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
-# Retrieve the GPG key fingerprint for a given email address
-gpg::id() {
-
-
-    local email="$1"
-    if [[ -z "$email" ]]; then
-        echo "Usage: gpg::fingerprint "
-        return 1
-    fi
-
-    gpg --with-colons --fingerprint "$email" | awk -F: '/^fpr:/ {print $10; exit}'
-}
-
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 # List all GPG keys
