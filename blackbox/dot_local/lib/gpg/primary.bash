@@ -41,3 +41,19 @@ EOF
         return 1
     fi
 }
+
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# Delete a GPG key pair
+gpg::primary::delete() {
+  local uid="$1"
+  if [[ -z "$uid" ]]; then
+    logger::error "Usage: gpg::primary::delete <uid>"
+    return 1
+  fi
+
+  logger::info "Deleting GPG secret key for UID: $uid"
+  gpg --batch --yes --delete-secret-key "$uid"
+  logger::info "Deleting GPG public key for UID: $uid"
+  gpg --batch --yes --delete-key "$uid"
+}

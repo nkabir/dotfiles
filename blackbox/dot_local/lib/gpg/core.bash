@@ -14,9 +14,10 @@ GPG_HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
     &> /dev/null && pwd 2> /dev/null; )";
 
 . "${GPG_HERE:?}/../logger/core.bash"
-. "${GPG_HERE:?}/primary.bash"
 . "${GPG_HERE:?}/public.bash"
 . "${GPG_HERE:?}/private.bash"
+. "${GPG_HERE:?}/primary.bash"
+
 
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
