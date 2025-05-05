@@ -19,6 +19,13 @@ gpg::primary::id() {
 }
 
 
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# List all GPG keys
+gpg::primary::list() {
+
+    gpg --list-secret-keys --with-colons | awk -F'[<>]' '/^uid:/ {print $2}'
+}
+
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 # gpg::primary::create
