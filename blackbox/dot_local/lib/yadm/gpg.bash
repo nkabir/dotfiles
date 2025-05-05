@@ -23,7 +23,7 @@ yadm::gpg::init() {
     fi
 
     logger::info "Creating new GPG keypair: $YADM_GPG_NAME <$YADM_GPG_EMAIL>"
-    if gpg::create "$YADM_GPG_NAME" "$YADM_GPG_EMAIL"; then
+    if gpg::primary::create "$YADM_GPG_NAME" "$YADM_GPG_EMAIL"; then
         logger::info "Successfully created GPG keypair for YADM"
         return 0
     else

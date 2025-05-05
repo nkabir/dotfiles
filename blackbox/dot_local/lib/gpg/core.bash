@@ -7,10 +7,6 @@
 # the fingerprint of a GPG key associated with a given email address.
 #
 #
-
-
-
-
 [ -n "$_GPG_CORE" ] && return 0
 _GPG_CORE=1
 
@@ -18,6 +14,9 @@ GPG_HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
     &> /dev/null && pwd 2> /dev/null; )";
 
 . "${GPG_HERE:?}/../logger/core.bash"
+. "${GPG_HERE:?}/primary.bash"
+. "${GPG_HERE:?}/public.bash"
+. "${GPG_HERE:?}/private.bash"
 
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -68,38 +67,6 @@ gpg::list() {
     gpg --list-secret-keys --with-colons | awk -F'[<>]' '/^uid:/ {print $2}'
 }
 
-
-# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
-# Create a new GPG key pair
-gpg::create() {
-  local real_name="$1"
-  local email="$2"
-
-  if [[ -z "$real_name" || -z "$email" ]]; then
-      logger::error "Usage: gpg::create \"Real Name\" \"email@example.com\""
-      return 1
-  fi
-
-  # Create a temporary batch file for GPG key parameters
-  local batch_file
-  batch_file=$(mktemp)
-
-  cat > "$batch_file" <<EOF
-Key-Type: RSA
-Key-Length: 4096
-Name-Real: $real_name
-Name-Email: $email
-Expire-Date: 0
-%no-protection
-%commit
-EOF
-
-  # Generate the key
-  gpg --batch --generate-key "$batch_file"
-
-  # Clean up
-  rm -f "$batch_file"
-}
 
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
