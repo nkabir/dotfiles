@@ -25,3 +25,21 @@ gpg::public::export() {
 
     logger::info "Exported public key for UID '$uid' to '$output_path'"
 }
+
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# import a public key
+gpg::public::import() {
+
+  local key_path="$1"
+  if [[ -z "$key_path" ]]; then
+    logger::error "No key path provided."
+    return 1
+  fi
+  if [[ ! -f "$key_path" ]]; then
+    logger::error "File not found: $key_path"
+    return 2
+  fi
+  logger::info "Importing armored public key from $key_path"
+  gpg --import "$key_path"
+}
