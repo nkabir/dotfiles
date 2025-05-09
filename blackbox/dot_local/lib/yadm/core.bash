@@ -1,4 +1,4 @@
-# yadm.bash
+# yadm/core.bash
 #
 # YADM - Yet Another Dotfiles Manager
 #
@@ -12,8 +12,6 @@ export YADM_GPG_NAME="YADM Secrets"
 
 
 . "${YADM_HERE:?}/../logger/core.bash"
-. "${YADM_HERE:?}/../gpg/core.bash"
-. "${YADM_HERE:?}/../bitwarden/core.bash"
 . "${YADM_HERE:?}/bitwarden.bash"
 . "${YADM_HERE:?}/gpg.bash"
 
