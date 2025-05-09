@@ -32,12 +32,18 @@ gpg::primary::list() {
 # Creates a new GPG key pair given a real name and email
 # Usage: gpg::primary::create "Real Name" "email@example.com"
 gpg::primary::create() {
-    local real_name="$1"
-    local email="$2"
+    local email="$1"
+    local real_name="$2"
 
     if [[ -z "$real_name" || -z "$email" ]]; then
         logger::error "Usage: gpg::primary::create \"Real Name\" \"email@example.com\""
         return 1
+    fi
+
+    # Check if key already exists for this email
+    if gpg --list-keys "$email" &>/dev/null; then
+        logger::info "GPG key for $email already exists. Skipping creation."
+        return 0
     fi
 
     # Create a temporary batch file with key parameters for unattended generation

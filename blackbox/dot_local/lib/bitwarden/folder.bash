@@ -42,6 +42,7 @@ bitwarden::folder::id() {
 
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# Create a new folder in Bitwarden (idempotant)
 bitwarden::folder::create() {
 
     local folder_name="$1"
@@ -80,6 +81,7 @@ bitwarden::folder::create() {
 }
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# Delete a folder in Bitwarden (idempotant)
 bitwarden::folder::delete() {
 
     local folder_name="$1"
@@ -109,6 +111,7 @@ bitwarden::folder::delete() {
 
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# list contents of folder
 bitwarden::folder::list() {
     local folder_name="$1"
     if [[ -z "$folder_name" ]]; then

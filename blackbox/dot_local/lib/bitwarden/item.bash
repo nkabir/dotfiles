@@ -5,15 +5,14 @@
 # your Bitwarden vault.
 #
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
-[ -n "$_BITWARDEN_ITEM" ] && return 0
-_BITWARDEN_ITEM=1
 
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# return an id for a named item
 bitwarden::item::id() {
     local search_term="$1"
     if [[ -z "$search_term" ]]; then
-        logger::error "Usage: bitwarden::read-item <search_term>"
+        logger::error "Usage: bitwarden::id <search_term>"
         return 1
     fi
 

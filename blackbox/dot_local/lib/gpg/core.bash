@@ -19,26 +19,28 @@ GPG_HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
 . "${GPG_HERE:?}/primary.bash"
 
 
-
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 # Check if GPG is installed and configured for SSH
 gpg::init() {
 
     # Check if gpg is installed
     if ! command -v gpg &> /dev/null; then
-	yadm::log::error "gpg is not installed. Please install it to use yadm."
+	logger::error "gpg is not installed. Please install it to use gpg."
 	return 1
     fi
 
     # Check if gpg-agent is running
     if ! pgrep -x "gpg-agent" > /dev/null; then
-	yadm::log::error "gpg-agent is not running. Please start it to use yadm."
-	return 1
+
+	if ! gpg-agent --daemon > /dev/null 2>&1; then
+	    logger::error "gpg-agent is not running. Please start it to use gpg."
+	    return 1
+	fi
     fi
 
     # Check if gpg is configured for SSH
     if ! gpgconf --list-dirs agent-ssh-socket > /dev/null; then
-	yadm::log::error "gpg is not configured for SSH. Please configure it to use yadm."
+	logger::error "gpg is not configured for SSH. Please configure it to use gpg."
 	return 1
     fi
 

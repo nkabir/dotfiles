@@ -4,9 +4,6 @@
 #
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-[ -n "$_BITWARDEN_ACCOUNT" ] && return 0
-_BITWARDEN_ACCOUNT=1
-
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 # Returns the Bitwarden session ID or nothing
