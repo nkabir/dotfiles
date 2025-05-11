@@ -12,8 +12,7 @@ export YADM_GPG_NAME="YADM Secrets"
 
 
 . "${YADM_HERE:?}/../logger/core.bash"
-. "${YADM_HERE:?}/bitwarden.bash"
-. "${YADM_HERE:?}/gpg.bash"
+. "${YADM_HERE:?}/repository.bash"
 
 
 
