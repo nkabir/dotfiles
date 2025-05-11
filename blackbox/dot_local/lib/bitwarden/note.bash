@@ -66,7 +66,7 @@ bitwarden::note::create() {
     item_id="$(bitwarden::note::id "$note_name")"
     if [[ -n "$item_id" ]]; then
         logger::info "Note '$note_name' already exists. Skipping creation."
-        return 0
+        return 4
     fi
 
     # Ensure folder exists and get its ID
