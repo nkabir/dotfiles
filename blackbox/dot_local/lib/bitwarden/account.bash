@@ -26,6 +26,24 @@ bitwarden::account::is-unlocked() {
 
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# Unlocks the Bitwarden account
+bitwarden::account::unlock() {
+
+    logger::info "Unlocking Bitwarden account"
+    read -s -p "Enter Bitwarden password: " password
+    echo
+    local session
+    session=$(echo "$password" | bw unlock --raw 2>/dev/null)
+    if [[ $? -ne 0 ]]; then
+	logger::error "Failed to unlock Bitwarden account"
+	return 1
+    fi
+    export BW_SESSION="$session"
+    unset password
+    logger::info "Bitwarden account unlocked"
+}
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 # Synchronizes the Bitwarden account
 bitwarden::account::sync() {
 

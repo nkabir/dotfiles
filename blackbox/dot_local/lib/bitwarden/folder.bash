@@ -24,7 +24,7 @@ bitwarden::folder::id() {
 
     local folder_name="$1"
     if [[ -z "$folder_name" ]]; then
-        logger::error "Usage: bitwarden::read-folder-by-name <folder_name>"
+        logger::error "Usage: bitwarden::id <folder_name>"
         return 1
     fi
 
