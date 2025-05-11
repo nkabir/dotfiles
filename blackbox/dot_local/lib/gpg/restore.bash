@@ -38,7 +38,7 @@ gpg::restore::bitwarden() {
         fi
 
         # Get full fingerprint after import
-        full_fingerprint="$(gpg::primary::list | grep -i "$short_fingerprint")"
+        full_fingerprint="$(gpg --list-secret | grep -i "$short_fingerprint")"
         if [[ -z "$full_fingerprint" ]]; then
             logger::error "Failed to verify imported key fingerprint"
             return 4

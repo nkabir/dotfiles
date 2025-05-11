@@ -18,6 +18,7 @@ GPG_HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
 . "${GPG_HERE:?}/private.bash"
 . "${GPG_HERE:?}/primary.bash"
 . "${GPG_HERE:?}/backup.bash"
+. "${GPG_HERE:?}/restore.bash"
 
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
