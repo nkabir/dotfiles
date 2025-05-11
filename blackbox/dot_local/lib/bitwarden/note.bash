@@ -61,6 +61,14 @@ bitwarden::note::create() {
         return 1
     fi
 
+     # Check if note already exists
+    local item_id
+    item_id="$(bitwarden::note::id "$note_name")"
+    if [[ -n "$item_id" ]]; then
+        logger::info "Note '$note_name' already exists. Skipping creation."
+        return 0
+    fi
+
     # Ensure folder exists and get its ID
     local folder_id
     folder_id="$(bitwarden::folder::id "$folder_name")"
@@ -84,6 +92,54 @@ bitwarden::note::create() {
         return 3
     fi
 }
+
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+bitwarden::note::update() {
+    local note_name="$1"
+    local folder_name="$2"
+    local note_content="$3"
+
+    if [[ -z "$note_name" || -z "$folder_name" || -z "$note_content" ]]; then
+        logger::error "Usage: bitwarden::note::update <note_name> <folder_name> <note_content>"
+        return 1
+    fi
+
+    # Get existing note ID
+    local item_id
+    item_id="$(bitwarden::note::id "$note_name")"
+    if [[ -z "$item_id" ]]; then
+        logger::error "Note '$note_name' not found. Cannot update."
+        return 2
+    fi
+
+    # Get folder ID
+    local folder_id
+    folder_id="$(bitwarden::folder::id "$folder_name")"
+    if [[ -z "$folder_id" ]]; then
+        logger::error "Folder '$folder_name' not found."
+        return 3
+    fi
+
+    # Retrieve and modify existing JSON
+    local existing_json
+    existing_json="$(bw get item "$item_id")"
+    local updated_json
+    updated_json="$(echo "$existing_json" | jq --arg notes "$note_content" --arg fid "$folder_id" \
+        '.notes = $notes | .folderId = $fid')"
+
+    # Update the note
+    local result
+    result="$(echo "$updated_json" | bw encode | bw edit item "$item_id" 2>&1)"
+    if [[ $? -eq 0 ]]; then
+        logger::info "Successfully updated note '$note_name' in folder '$folder_name'"
+        return 0
+    else
+        logger::error "Failed to update note '$note_name': $result"
+        return 4
+    fi
+}
+
 
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
