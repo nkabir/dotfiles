@@ -2,8 +2,6 @@
 # This script is used to create a note in Bitwarden
 # It requires the Bitwarden CLI to be installed and configured.
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
-[ -n "$_BITWARDEN_NOTE" ] && return 0
-_BITWARDEN_NOTE=1
 
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -190,4 +188,46 @@ bitwarden::note::list() {
     fi
 
     echo "$attachments"
+}
+
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# Downloads the latest note (by last revision date) in a given folder.
+# Returns the note name.
+bitwarden::note::latest() {
+    local folder_name="$1"
+
+    if [[ -z "$folder_name" ]]; then
+        logger::error "Usage: bitwarden::note::latest <folder_name>"
+        return 1
+    fi
+
+    # Get folder ID
+    local folder_id
+    folder_id="$(bitwarden::folder::id "$folder_name")"
+    if [[ -z "$folder_id" ]]; then
+        logger::error "Folder '$folder_name' not found"
+        return 2
+    fi
+
+    # Find the latest note by revision date in the folder
+    local note_json
+    note_json="$(bw list items --folderid "$folder_id" | jq -r '[.[] | select(.type == 2)] | sort_by(.revisionDate) | reverse | .[0]')"
+    if [[ -z "$note_json" || "$note_json" == "null" ]]; then
+        logger::warn "No notes found in folder '$folder_name'"
+        return 3
+    fi
+
+    local note_name
+    note_name="$(echo "$note_json" | jq -r '.name')"
+    local note_content
+    note_content="$(echo "$note_json" | jq -r '.notes')"
+
+    if [[ -z "$note_name" || "$note_name" == "null" ]]; then
+        logger::warn "Could not extract note name from latest note"
+        return 4
+    fi
+
+    # Return the note name
+    echo "$note_name"
 }

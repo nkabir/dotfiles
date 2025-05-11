@@ -1,8 +1,6 @@
 # folder.bash
 # Manages folders on BitWarden
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
-[ -n "$_BITWARDEN_FOLDER" ] && return 0
-_BITWARDEN_FOLDER=1
 
 # TODO add an update method that changes the name of a folder given an
 # id

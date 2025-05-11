@@ -25,6 +25,7 @@ export YADM_GPG_NAME="YADM Secrets"
 # yadm::restore
 # ---
 # yadm::bitwarden::restore # download secrets from bitwarden
+#  bitwarden::
 # yadm::gpg::restore # loads secrets into gpg
 
 # yadm::backup
@@ -44,3 +45,16 @@ export YADM_GPG_NAME="YADM Secrets"
 
 # yadm::decrypt
 # ---
+
+
+# yadm::init
+#   yadm::bitwarden::init
+#     bitwarden::folder::init "yadm"
+#     note_name = bitwarden::note::latest # get latest note name
+#     bitwarden::attachment::download note_name public.asc ./public.asc
+#     bitwarden::attachment::download note_name private.asc ./private.asc
+#   yadm::gpg::init
+#     if public.asc and private.asc are available, load them
+#     otherwise no backup exists. Force user to create new key pair
+#   yadm::gpg::backup
+#     gpg::primary::export

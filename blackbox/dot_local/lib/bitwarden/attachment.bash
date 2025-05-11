@@ -2,9 +2,6 @@
 # Bitwarden CLI script to upload and download attachments
 #
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
-[ -n "$_BITWARDEN_ATTACHMENT" ] && return 0
-_BITWARDEN_ATTACHMENT=1
-
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 bitwarden::attachment::id() {
@@ -120,12 +117,6 @@ bitwarden::attachment::download() {
     if [[ -z "$note_name" || -z "$attachment_name" || -z "$out_path" ]]; then
         logger::error "Usage: bitwarden::attachment::download <note_name> <attachment_name> <out_path>"
         return 1
-    fi
-
-    # Ensure Bitwarden session is unlocked
-    if ! bitwarden::account::is-unlocked; then
-        logger::error "Bitwarden session is locked. Please unlock before downloading attachments."
-        return 2
     fi
 
     # Get item ID for the note
