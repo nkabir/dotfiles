@@ -135,8 +135,9 @@ vault::init() {
 
     # Check if we have existing configuration
     local bitwarden_count
-    local git_count
     bitwarden_count=$(echo "$state" | jq -r '.bitwarden_items | length')
+
+    local git_count
     git_count=$(echo "$state" | jq -r '.git_repos | length')
 
     if [ "$bitwarden_count" -gt 0 ] || [ "$git_count" -gt 0 ]; then
@@ -163,13 +164,10 @@ vault::init() {
                 # Recovery flow
                 if [ "$bitwarden_count" -gt 0 ]; then
                     # Select item to restore (for now, just use the first one)
-                    local item_id
-                    item_id=$(echo "$state" | jq -r '.bitwarden_items[0].id')
-
                     logger::info "Restoring from Bitwarden backup..."
-                    local fingerprint
-                    fingerprint=$(restore_from_bitwarden "$item_id")
-                    logger::info "Restored GPG key: $fingerprint"
+		    gpg::restore::bitwarden "gig.vault"
+
+                    logger::info "Restored GPG keys from Bitwarden"
 
                     # Clone existing repository
                     if [ "$git_count" -gt 0 ]; then
@@ -185,8 +183,13 @@ vault::init() {
             fi
         fi
     fi
-
-
-
     return 0
+}
+
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::
+# synchronize secrets
+vault::sync() {
+
+    yadm::repository::sync
 }
