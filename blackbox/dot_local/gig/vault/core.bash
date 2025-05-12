@@ -32,6 +32,7 @@ PRIVATE_ATTACHMENT="private.asc"
 # NOTE_NAME=<fp-16>.secrets.github.com
 
 
+
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 vault::check() {
 
@@ -109,4 +110,21 @@ vault::status() {
     state_file=$(vault::state)
     cat $state_file
     rm -f "$state_file"
+}
+
+
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+vault::init() {
+
+    logger::info "gig.vault initialization..."
+
+    # Check for required tools
+    vault::check || return 1
+
+    if ! bitwarden::account::is-unlocked; then
+	bitwarden::account::unlock
+    fi
+
+    return 0
 }
