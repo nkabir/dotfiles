@@ -32,6 +32,7 @@ EOF
 
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# return id for given note name
 bitwarden::note::id() {
 
     local note_name="$1"

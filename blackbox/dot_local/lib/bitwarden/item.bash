@@ -12,7 +12,7 @@
 bitwarden::item::id() {
     local search_term="$1"
     if [[ -z "$search_term" ]]; then
-        logger::error "Usage: bitwarden::id <search_term>"
+        logger::error "Usage: bitwarden::item::id <search_term>"
         return 1
     fi
 

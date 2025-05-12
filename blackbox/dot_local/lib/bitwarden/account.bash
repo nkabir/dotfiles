@@ -27,6 +27,9 @@ bitwarden::account::is-unlocked() {
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 # Unlocks the Bitwarden account
+# NOTE this may be better handled by default bitwarden commands
+# to avoid security issues
+#
 bitwarden::account::unlock() {
 
     logger::info "Unlocking Bitwarden account"
