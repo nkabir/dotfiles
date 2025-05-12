@@ -46,7 +46,7 @@ vault::check() {
     done
 
     if [ ${#missing_tools[@]} -gt 0 ]; then
-        log_error "Missing required tools: ${missing_tools[*]}"
+        logger::error "Missing required tools: ${missing_tools[*]}"
         return 1
     fi
 
@@ -157,31 +157,7 @@ vault::init() {
             done
         fi
 
-        if [ "$FORCE" = false ]; then
-            read -p "Restore from existing configuration? [Y/n] " -n 1 -r
-            echo
-            if [[ ! $REPLY =~ ^[Nn]$ ]]; then
-                # Recovery flow
-                if [ "$bitwarden_count" -gt 0 ]; then
-                    # Select item to restore (for now, just use the first one)
-                    logger::info "Restoring from Bitwarden backup..."
-		    gpg::restore::bitwarden "gig.vault"
-
-                    logger::info "Restored GPG keys from Bitwarden"
-
-                    # Clone existing repository
-                    if [ "$git_count" -gt 0 ]; then
-                        local repo_url
-                        repo_url=$(echo "$state" | jq -r '.git_repos[0]')
-                        logger::info "Cloning repository: $repo_url"
-                        yadm clone "$repo_url"
-                        logger::info "Repository cloned"
-                    fi
-                fi
-
-                rm -f "$state_file"
-            fi
-        fi
+        rm -f "$state_file"
     fi
     return 0
 }

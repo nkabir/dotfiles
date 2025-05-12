@@ -30,6 +30,7 @@ common = [
 "tree",
 "uv",
 "vim",
+"yadm",
 "yq",
 ]
 
