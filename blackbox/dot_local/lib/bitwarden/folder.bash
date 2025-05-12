@@ -109,7 +109,7 @@ bitwarden::folder::delete() {
 
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
-# list contents of folder
+# list contents of folder in reverse chronological order
 bitwarden::folder::list() {
     local folder_name="$1"
     if [[ -z "$folder_name" ]]; then
@@ -125,9 +125,10 @@ bitwarden::folder::list() {
         return 2
     fi
 
-    # List secure notes (type=2) in folder
+    # List secure notes (type=2) in folder, sorted by revisionDate descending
     local notes
-    notes=$(bw list items --folderid "$folder_id" | jq -r '.[] | select(.type == 2) | .name')
+    notes=$(bw list items --folderid "$folder_id" | \
+        jq -r '[.[] | select(.type == 2)] | sort_by(.revisionDate) | reverse | .[] | .name')
 
     if [[ -z "$notes" ]]; then
         logger::info "No secure notes found in folder '$folder_name'"

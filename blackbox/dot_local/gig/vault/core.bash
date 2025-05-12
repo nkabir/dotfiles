@@ -10,6 +10,9 @@ VAULT_HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
 
 . "${VAULT_HERE:?}/../../lib/cmd/core.bash"
 . "${VAULT_HERE:?}/../../lib/bitwarden/core.bash"
+. "${VAULT_HERE:?}/../../lib/gpg/core.bash"
+. "${VAULT_HERE:?}/../../lib/yadm/core.bash"
+
 
 
 REQUIRED_TOOLS=(
@@ -20,17 +23,17 @@ REQUIRED_TOOLS=(
     jq
 )
 
-REMOTE_FOLDER="gig.vault"
+BITWARDEN_FOLDER="gig.vault"
 SECRET_GIT="secrets.github.com"
-LOCAL_FOLDER="$HOME/.config/${REMOTE_FOLDER:?}"
-KEY_NAME="${REMOTE_FOLDER:?}@${SECRET_GIT:?}"
+LOCAL_FOLDER="$HOME/.config/${BITWARDEN_FOLDER:?}"
+KEY_UID="yadm@${SECRET_GIT:?}"
 PUBLIC_ATTACHMENT="public.asc"
 PRIVATE_ATTACHMENT="private.asc"
 # NOTE_NAME=<fp-16>.secrets.github.com
 
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
-vault::cmd::check() {
+vault::check() {
 
     local missing_tools=()
     local required_tools=("${REQUIRED_TOOLS[@]}")
@@ -51,6 +54,17 @@ vault::cmd::check() {
 
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# backup vault key and content
+vault::backup() {
+
+    echo $KEY_UID
+
+    gpg::backup::bitwarden $KEY_UID "$BITWARDEN_FOLDER"
+    yadm::repository::sync
+}
+
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 vault::state() {
 
     local state_file="/tmp/gig-vault-state.json"
@@ -58,13 +72,13 @@ vault::state() {
     # Initialize state object
     echo '{"bitwarden_items":[],"git_repos":[],"local_gpg_keys":[]}' > "$state_file"
 
-    # Check Bitwarden for vault items
+    # # Check Bitwarden for vault items
     local folder_id
-    folder_id=$(bitwarden::folder::id "$REMOTE_FOLDER")
+    folder_id=$(bitwarden::folder::id "$BITWARDEN_FOLDER")
 
     if [ -n "$folder_id" ]; then
         local items
-        items=$(bw list items --folderid "$folder_id" | jq -c '[.[] | select(.type == 2 and .name | endswith(".github.com"))]')
+        items=$(bw list items --folderid "$folder_id" | jq -c '[.[] | select(.type == 2)]')
         echo "$(jq --argjson items "$items" '.bitwarden_items = $items' "$state_file")" > "$state_file"
     fi
 
@@ -84,4 +98,15 @@ vault::state() {
 
     echo "$state_file"
 
+}
+
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# get vault status
+vault::status() {
+
+    local state_file
+    state_file=$(vault::state)
+    cat $state_file
+    rm -f "$state_file"
 }
