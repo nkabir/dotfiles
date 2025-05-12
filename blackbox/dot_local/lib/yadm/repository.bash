@@ -65,16 +65,16 @@ yadm::repository::rekey() {
     old_fingerprint=$(gpg::primary::id "$uid")
     old_note="$(gpg::backup::name "$uid")"
 
-    echo "Current GPG key: $old_fingerprint"
-    echo "Current UID : $uid"
-    echo "Current Note: $old_note"
+    logger::info "Current GPG key: $old_fingerprint"
+    logger::info "Current UID : $uid"
+    logger::info "Current Note: $old_note"
 
     # Find repository from Bitwarden
     local items
     items=$(bw list items --search "$old_note")
 
     if [ "$(echo "$items" | jq length)" -eq 0 ]; then
-        log_error "Could not find current key in Bitwarden"
+        logger::error "Could not find current key in Bitwarden"
         return 1
     fi
 
