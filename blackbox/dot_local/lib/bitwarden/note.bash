@@ -16,7 +16,7 @@ bitwarden::note::json() {
     fi
 
     # Prepare note JSON
-    echo $(cat <<EOF
+    cat <<EOF
 {
   "type": 2,
   "name": "$name",
@@ -27,7 +27,6 @@ bitwarden::note::json() {
   }
 }
 EOF
-	  )
 }
 
 

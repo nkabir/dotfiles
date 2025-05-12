@@ -59,13 +59,13 @@ bitwarden::folder::create() {
 
     # Folder does not exist, create it
     logger::info "Creating Bitwarden folder '$folder_name'"
-    local create_result
-    local folder_json="$(bitwarden::folder::json "$folder_name")"
+    local folder_json
+    folder_json="$(bitwarden::folder::json "$folder_name")"
 
-    create_result="$(echo "$folder_json" | bw encode | bw create folder)"
-    if [[ $? -ne 0 ]]; then
-        logger::error "Failed to create Bitwarden folder '$folder_name': $create_result"
-        return 2
+    local create_result
+    if ! create_result="$(echo "$folder_json" | bw encode | bw create folder 2>&1)"; then
+	logger::error "Creation failed: $result"
+	return 2
     fi
 
     folder_id="$(echo "$create_result" | jq -r '.id')"

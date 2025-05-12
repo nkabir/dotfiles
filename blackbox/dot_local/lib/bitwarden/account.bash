@@ -33,7 +33,7 @@ bitwarden::account::is-unlocked() {
 bitwarden::account::unlock() {
 
     logger::info "Unlocking Bitwarden account"
-    read -s -p "Enter Bitwarden password: " password
+    read -rs -p "Enter Bitwarden password: " password
     echo
     local session
     session=$(echo "$password" | bw unlock --raw 2>/dev/null)
@@ -41,7 +41,7 @@ bitwarden::account::unlock() {
 	logger::error "Failed to unlock Bitwarden account"
 	return 1
     fi
-    export BW_SESSION="$session"
+    export BW_SESSION="$session" && unset session
     unset password
     logger::info "Bitwarden account unlocked"
 }

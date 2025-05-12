@@ -136,6 +136,7 @@ bitwarden::attachment::download() {
     fi
 
     # Download the attachment
+    mkdir -p "$(dirname "$out_path")"
     if bw get attachment "$attachment_id" --itemid "$item_id" --output "$out_path"; then
         logger::info "Successfully downloaded attachment '$attachment_name' from note '$note_name' to '$out_path'"
         return 0

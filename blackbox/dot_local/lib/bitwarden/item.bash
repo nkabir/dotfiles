@@ -17,7 +17,7 @@ bitwarden::item::id() {
     fi
 
     local result
-    result="$(bw get item "$search_term" 2>&1)"
+    result="$(bw get item "$search_term" --quiet 2>&1)"
     if [[ "$result" == "Not found."* ]]; then
         logger::debug "Bitwarden item '$search_term' not found."
         return 1
