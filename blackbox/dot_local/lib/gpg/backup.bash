@@ -2,6 +2,9 @@
 # shellcheck shell=bash
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+# ::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# return the name of the note for the specified uid
+# The note name is derived from the GPG fingerprint and the repository
 gpg::backup::name() {
 
     local uid
