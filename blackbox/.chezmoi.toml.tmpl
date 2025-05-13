@@ -12,6 +12,7 @@ available to templates
 ChezMoi Main Configuration
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 */ -}}
+
 {{- $emailFree := promptStringOnce . "emailFree" "Email address hosted on free service" -}}
 {{- $emailCorp := promptStringOnce . "emailCorp" "Email address hosted on corp service" -}}
 {{- $githubId  := promptStringOnce . "githubId" "Github username" -}}
