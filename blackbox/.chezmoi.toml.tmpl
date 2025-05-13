@@ -1,25 +1,47 @@
 # Main ChezMoi configuration file (blackbox)
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-# This file is generated during initialization Note that custom data
+# This file is generated during initialization. Note that custom data
 # has not been loaded so only .chezmoi.xxx path data is available.
 # The locations of user-specified data are configured in this file.
 
-# data here is merged with data defined in .chezmoidata and made
-# available to templates
-# ChezMoi Main Configuration
+{{- /*
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::
+data here is merged with data defined in .chezmoidata and made
+available to templates
+ChezMoi Main Configuration
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::
+*/ -}}
 {{- $emailFree := promptStringOnce . "emailFree" "Email address hosted on free service" -}}
 {{- $emailCorp := promptStringOnce . "emailCorp" "Email address hosted on corp service" -}}
+{{- $githubId  := promptStringOnce . "githubId" "Github username" -}}
 
-# use common scripts to generate dynamic data
+{{- $yadmRepo  := "secrets" -}} # Name of Git repository that contains secrets
+
+{{- /*
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::
+use common scripts to generate dynamic data
+the name of the person using this system
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::
+*/ -}}
 {{- $operator :=
     output (joinPath .chezmoi.sourceDir
     "../common/scripts/get-full-name.py") -}}
+
+{{- /*
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::
+execution environment (container, LXD, VM, bare metal)
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::
+*/ -}}
 {{- $exenv :=
     output (joinPath .chezmoi.sourceDir
     "../common/scripts/get-exenv.py") -}}
 
-# operating system details
+{{- /*
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::
+operating system details
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::
+*/ -}}
 {{- $osId := "" -}}
 {{- $osVersion := "" -}}
 {{- if (eq .chezmoi.os "linux") -}}
@@ -29,17 +51,29 @@
 {{-   end -}}
 {{- end -}}
 
-###
+{{- /*
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::
+User and host specific data
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::
+*/ -}}
+#
 
 [data]
-  email.free = {{ $emailFree | quote }}
-  email.corp = {{ $emailCorp | quote }}
-  operator = {{ $operator | quote }} # full name of user e.g. Alice Smith
-  exenv = {{ $exenv | quote }} # execution environment
-  osId = {{ $osId | quote }} # eg ubuntu
-  osVersion = {{ $osVersion | quote }} # eg 24.04
-  isUbuntu = {{ eq $osId "ubuntu" }} # Ubuntu flag
-  isAlmaLinux = {{ eq $osId "almalinux" }} # Alma flag
-
-[bitwarden]
-  command = "bw"
+    # free service email address e.g. GMail, Yahoo, Hotmail, etc.
+    # these values tend to change less often than corp counterparts
+    # use this value when persistence of value is important
+    email.free  = {{ $emailFree | quote }}
+    # corp services are fully controlled by the company but may change
+    # over time due to rebranding or corporate actions
+    # use this value when accessing internal resources
+    email.corp  = {{ $emailCorp | quote }} # corp service email address
+    githubId    = {{ $githubId | quote }} # used to manage dotfiles and yadm secrets
+    yadmGit     = "git@github.com:{{ $githubId }}/{{ $yadmRepo }}.git"
+    yadmUid     = "yadm@{{ $yadmRepo }}.github.com"
+    operator    = {{ $operator | quote }} # full name of user e.g. Alice Smith
+    exenv       = {{ $exenv | quote }} # execution environment
+    osId        = {{ $osId | quote }} # eg ubuntu
+    osVersion   = {{ $osVersion | quote }} # eg 24.04
+    isUbuntu    = {{ eq $osId "ubuntu" }} # Ubuntu flag
+    isAlmaLinux = {{ eq $osId "almalinux" }} # Alma flag
+    bwGigFolder = "gig.vault" # folder in Bitwarden where keys are stored
