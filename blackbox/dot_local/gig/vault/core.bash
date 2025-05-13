@@ -229,3 +229,25 @@ vault::doctor() {
         return 0
     fi
 }
+
+vault::encryption() {
+
+    local encrypt_file="$HOME/.config/yadm/encrypt"
+
+    if [ ! -f "$encrypt_file" ]; then
+        log_warning "No encryption patterns configured"
+        return 1
+    fi
+
+    echo "Encryption Patterns"
+    echo "==================="
+    echo
+
+    cat "$encrypt_file" | while read -r pattern; do
+	if [[ ! "$pattern" =~ ^# ]]; then
+	    echo "  • $pattern"
+
+	fi
+    done
+
+}
