@@ -169,3 +169,63 @@ vault::sync() {
 
     yadm::repository::sync
 }
+
+
+vault::doctor() {
+    local issues=()
+
+    logger::info "Verifying vault integrity..."
+
+    # Check GPG key matches YADM config
+    if yadm status >/dev/null 2>&1; then
+        local configured_key
+        configured_key=$(yadm config yadm.gpg-recipient)
+
+        if [ -n "$configured_key" ]; then
+            if ! gpg --list-secret-keys "$configured_key" >/dev/null 2>&1; then
+                issues+=("Configured GPG key ${configured_key:0:16} not found in keyring")
+            fi
+        else
+            issues+=("No GPG key configured in YADM")
+        fi
+    else
+        issues+=("YADM not initialized")
+    fi
+
+    # Check Bitwarden backup exists
+    local state_file
+    state_file=$(vault::state)
+    local backup_count
+    backup_count=$(jq -r '.bitwarden_items | length' "$state_file")
+
+    if [ "$backup_count" -eq 0 ]; then
+        issues+=("No Bitwarden backups found")
+    fi
+
+    # Test encryption/decryption
+    if yadm status >/dev/null 2>&1; then
+        local test_file="$HOME/.config/yadm/test-encrypt"
+        echo "test content" > "$test_file"
+
+        if ! yadm encrypt >/dev/null 2>&1; then
+            issues+=("Encryption test failed")
+        elif ! yadm decrypt >/dev/null 2>&1; then
+            issues+=("Decryption test failed")
+        fi
+
+        rm -f "$test_file"
+    fi
+
+    rm -f "$state_file"
+
+    if [ ${#issues[@]} -gt 0 ]; then
+        logger::error "Integrity issues found:"
+        for issue in "${issues[@]}"; do
+            echo "  • $issue"
+        done
+        return 1
+    else
+        logger::info "Vault integrity verified"
+        return 0
+    fi
+}
