@@ -10,6 +10,7 @@
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 # return an id for a named item
 bitwarden::item::id() {
+
     local search_term="$1"
     if [[ -z "$search_term" ]]; then
         logger::error "Usage: bitwarden::item::id <search_term>"
@@ -17,7 +18,7 @@ bitwarden::item::id() {
     fi
 
     local result
-    result="$(bw get item "$search_term" --quiet 2>&1)"
+    result="$(bw get item "$search_term" 2>&1)"
     if [[ "$result" == "Not found."* ]]; then
         logger::debug "Bitwarden item '$search_term' not found."
         return 1
