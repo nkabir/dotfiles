@@ -1,0 +1,24 @@
+# gum/core.bash
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+[ -n "$_GUM_CORE" ] && return 0
+_GUM_CORE=1
+
+GUM_HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
+    &> /dev/null && pwd 2> /dev/null; )";
+
+# choose   : Choose an option from a list of choices
+
+# confirm  : Ask a user to confirm an action
+. "${GUM_HERE:?}/confirm.bash"
+
+# file     : Pick a file from a folder
+# filter   : Filter items from a list
+# format   : Format a string using a template
+# input    : Prompt for some input
+# join     : Join text vertically or horizontally
+# pager    : Scroll through a file
+# spin     : Display spinner while running a command
+# style    : Apply coloring, borders, spacing to text
+# table    : Render a table of data
+# write    : Prompt for long-form text
+# log      : Log messages to output
