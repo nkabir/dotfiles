@@ -13,6 +13,8 @@ GUM_HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
 . "${GUM_HERE:?}/confirm.bash"
 
 # file     : Pick a file from a folder
+. "${GUM_HERE:?}/file.bash"
+
 # filter   : Filter items from a list
 # format   : Format a string using a template
 # input    : Prompt for some input
