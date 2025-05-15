@@ -25,6 +25,8 @@ GUM_HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
 . "${GUM_HERE:?}/input.bash"
 
 # join     : Join text vertically or horizontally
+. "${GUM_HERE:?}/join.bash"
+
 # pager    : Scroll through a file
 # spin     : Display spinner while running a command
 # style    : Apply coloring, borders, spacing to text
