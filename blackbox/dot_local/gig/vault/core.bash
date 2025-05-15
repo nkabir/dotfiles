@@ -14,15 +14,6 @@ VAULT_HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
 . "${VAULT_HERE:?}/../../lib/yadm/core.bash"
 
 
-
-REQUIRED_TOOLS=(
-    yadm
-    gpg
-    bw
-    git
-    jq
-)
-
 BITWARDEN_FOLDER="gig.vault"
 SECRET_GIT="secrets.github.com"
 LOCAL_FOLDER="$HOME/.config/${BITWARDEN_FOLDER:?}"
@@ -34,12 +25,19 @@ PRIVATE_ATTACHMENT="private.asc"
 
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
-vault::check() {
+vault::prerequisites() {
 
     local missing_tools=()
-    local required_tools=("${REQUIRED_TOOLS[@]}")
+    local required_tools=(
+	yadm
+	gpg
+	bw
+	git
+	jq
+    )
 
     for tool in "${required_tools[@]}"; do
+
         if ! cmd::check "$tool"; then
             missing_tools+=("$tool")
         fi
@@ -47,11 +45,13 @@ vault::check() {
 
     if [ ${#missing_tools[@]} -gt 0 ]; then
         logger::error "Missing required tools: ${missing_tools[*]}"
+	logger::error "Please install the missing tools and try again."
         return 1
     fi
 
     return 0
 }
+export -f vault::prerequisites
 
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -63,6 +63,7 @@ vault::backup() {
     gpg::backup::bitwarden $KEY_UID "$BITWARDEN_FOLDER"
     yadm::repository::sync
 }
+export -f vault::backup
 
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -100,6 +101,7 @@ vault::state() {
     echo "$state_file"
 
 }
+export -f vault::state
 
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -111,6 +113,7 @@ vault::status() {
     cat $state_file
     rm -f "$state_file"
 }
+export -f vault::status
 
 
 
@@ -157,10 +160,11 @@ vault::init() {
             done
         fi
 
-        rm -f "$state_file"
+        # rm -f "$state_file"
     fi
     return 0
 }
+export -f vault::init
 
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -169,6 +173,7 @@ vault::sync() {
 
     yadm::repository::sync
 }
+export -f vault::sync
 
 
 vault::doctor() {

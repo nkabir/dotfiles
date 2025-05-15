@@ -1,6 +1,7 @@
 
 [homebrew]
 common = [
+"aider",
 "ansible",
 "ansible-builder",
 "ansible-cmdb",
