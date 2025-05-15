@@ -16,6 +16,8 @@ GUM_HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
 . "${GUM_HERE:?}/file.bash"
 
 # filter   : Filter items from a list
+. "${GUM_HERE:?}/filter.bash"
+
 # format   : Format a string using a template
 # input    : Prompt for some input
 # join     : Join text vertically or horizontally
