@@ -28,6 +28,8 @@ GUM_HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
 . "${GUM_HERE:?}/join.bash"
 
 # pager    : Scroll through a file
+. "${GUM_HERE:?}/pager.bash"
+
 # spin     : Display spinner while running a command
 # style    : Apply coloring, borders, spacing to text
 # table    : Render a table of data
