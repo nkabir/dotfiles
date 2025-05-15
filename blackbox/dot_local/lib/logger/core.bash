@@ -67,13 +67,23 @@ logger::log() {
         logger -t "$LOGGER_SYSLOG_TAG" -p "user.${syslog_level}" "$formatted"
     fi
 }
+export -f logger::log
 
 # Convenience wrappers
 logger::debug()    { logger::log DEBUG "$@"; }
+export -f logger::debug
+
 logger::info()     { logger::log INFO "$@"; }
+export -f logger::info
+
 logger::warn()     { logger::log WARN "$@"; }
+export -f logger::warn
+
 logger::error()    { logger::log ERROR "$@"; }
+export -f logger::error
+
 logger::critical() { logger::log CRITICAL "$@"; }
+export -f logger::critical
 
 # Example usage:
 # logger::info "This is an info message"
