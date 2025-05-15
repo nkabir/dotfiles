@@ -31,6 +31,8 @@ GUM_HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
 . "${GUM_HERE:?}/pager.bash"
 
 # spin     : Display spinner while running a command
+. "${GUM_HERE:?}/spin.bash"
+
 # style    : Apply coloring, borders, spacing to text
 # table    : Render a table of data
 # write    : Prompt for long-form text
