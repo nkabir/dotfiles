@@ -7,6 +7,7 @@ GUM_HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
     &> /dev/null && pwd 2> /dev/null; )";
 
 # choose   : Choose an option from a list of choices
+. "${GUM_HERE:?}/choose.bash"
 
 # confirm  : Ask a user to confirm an action
 . "${GUM_HERE:?}/confirm.bash"
