@@ -43,3 +43,4 @@ GUM_HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
 . "${GUM_HERE:?}/write.bash"
 
 # log      : Log messages to output
+. "${GUM_HERE:?}/log.bash"
