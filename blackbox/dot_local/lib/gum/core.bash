@@ -34,6 +34,8 @@ GUM_HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
 . "${GUM_HERE:?}/spin.bash"
 
 # style    : Apply coloring, borders, spacing to text
+. "${GUM_HERE:?}/style.bash"
+
 # table    : Render a table of data
 # write    : Prompt for long-form text
 # log      : Log messages to output
