@@ -37,5 +37,7 @@ GUM_HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
 . "${GUM_HERE:?}/style.bash"
 
 # table    : Render a table of data
+. "${GUM_HERE:?}/table.bash"
+
 # write    : Prompt for long-form text
 # log      : Log messages to output
