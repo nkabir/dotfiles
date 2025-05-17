@@ -124,3 +124,49 @@ skate::get() {
     echo "$value"
 }
 export -f skate::get
+
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+skate::set() {
+    # Usage: skate::set [--force] <key> <value>
+    local force=""
+    local key=""
+    local value=""
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --force|-f)
+                force="--force"
+                shift
+                ;;
+            -*)
+                logger::error "Unknown option: $1"
+                return 1
+                ;;
+            *)
+                if [[ -z "$key" ]]; then
+                    key="$1"
+                elif [[ -z "$value" ]]; then
+                    value="$1"
+                else
+                    logger::error "Too many arguments for skate::set"
+                    return 2
+                fi
+                shift
+                ;;
+        esac
+    done
+
+    if [[ -z "$key" || -z "$value" ]]; then
+        logger::error "Key and value required for skate::set"
+        return 3
+    fi
+
+    if skate set $force "$key" "$value"; then
+        logger::info "Set key: $key"
+    else
+        logger::error "Failed to set key: $key"
+        return 4
+    fi
+}
+export -f skate::set
