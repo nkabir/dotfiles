@@ -28,3 +28,4 @@ export -f bitwarden::lock
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::
 . "${BITWARDEN_HERE}/login.bash"
+. "${BITWARDEN_HERE}/status.bash"
