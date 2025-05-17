@@ -25,6 +25,7 @@ common = [
 "mani",
 "redo",
 "ripgrep",
+"skate",
 "starship",
 "the_silver_searcher",
 "tmux",
