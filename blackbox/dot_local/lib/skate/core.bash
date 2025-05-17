@@ -1,6 +1,8 @@
 # skate/core.bash
 # shellcheck shell=bash
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+[ -n "$_SKATE_CORE" ] && return 0
+_SKATE_CORE=1
 
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -77,3 +79,48 @@ skate::delete-db() {
     fi
 }
 export -f skate::delete-db
+
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+skate::get() {
+    # Usage: skate::get [--default <value>] <key>
+    local default=""
+    local key=""
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --default)
+                default="$2"
+                shift 2
+                ;;
+            -*)
+                logger::error "Unknown option: $1"
+                return 1
+                ;;
+            *)
+                key="$1"
+                shift
+                ;;
+        esac
+    done
+
+    if [[ -z "$key" ]]; then
+        logger::error "No key specified for skate::get"
+        return 2
+    fi
+
+    local value
+    if ! value="$(skate get "$key" 2>/dev/null)"; then
+        if [[ -n "$default" ]]; then
+            logger::info "Key not found: $key, returning default: $default"
+            echo "$default"
+            return 0
+        else
+            logger::error "Failed to get key: $key"
+            return 3
+        fi
+    fi
+
+    echo "$value"
+}
+export -f skate::get
