@@ -8,4 +8,23 @@ BITWARDEN_HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
     &> /dev/null && pwd 2> /dev/null; )";
 
 . "${BITWARDEN_HERE}/../logger/core.bash"
+
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+bitwarden::logout() {
+
+    bw logout
+}
+export -f bitwarden::logout
+
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+bitwarden::lock() {
+
+    bw lock
+}
+export -f bitwarden::lock
+
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::
 . "${BITWARDEN_HERE}/login.bash"
