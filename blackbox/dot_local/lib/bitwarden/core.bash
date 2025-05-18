@@ -408,3 +408,84 @@ bitwarden::get() {
     fi
 }
 export -f bitwarden::get
+
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# bitwarden::create
+# Usage:
+#   bitwarden::create <object> <encoded_json>
+#   bitwarden::create attachment --file <path> --itemid <id> [--name <filename>]
+bitwarden::create() {
+    local object=""
+    local encoded_json=""
+    local file=""
+    local itemid=""
+    local name=""
+    local args=()
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            item|folder|org-collection)
+                object="$1"
+                shift
+                if [[ $# -gt 0 && "$1" != --* ]]; then
+                    encoded_json="$1"
+                    shift
+                fi
+                ;;
+            attachment)
+                object="attachment"
+                shift
+                ;;
+            --file)
+                file="$2"
+                shift 2
+                ;;
+            --itemid)
+                itemid="$2"
+                shift 2
+                ;;
+            --name)
+                name="$2"
+                shift 2
+                ;;
+            -*)
+                args+=("$1")
+                shift
+                ;;
+            *)
+                if [[ -z "$object" ]]; then
+                    object="$1"
+                    shift
+                elif [[ -z "$encoded_json" && "$object" != "attachment" ]]; then
+                    encoded_json="$1"
+                    shift
+                else
+                    args+=("$1")
+                    shift
+                fi
+                ;;
+        esac
+    done
+
+    logger::info "bitwarden::create: object=$object encoded_json=$encoded_json file=$file itemid=$itemid name=$name args=${args[*]}"
+
+    if [[ "$object" == "attachment" ]]; then
+        if [[ -z "$file" || -z "$itemid" ]]; then
+            logger::error "bitwarden::create: attachment requires --file <path> and --itemid <id>"
+            return 2
+        fi
+        local cmd=(bw create attachment --file "$file" --itemid "$itemid")
+        [[ -n "$name" ]] && cmd+=(--name "$name")
+        "${cmd[@]}"
+        return $?
+    elif [[ -n "$object" && -n "$encoded_json" ]]; then
+        bw create "$object" "$encoded_json" "${args[@]}"
+        return $?
+    else
+        logger::error "bitwarden::create: invalid arguments"
+        return 2
+    fi
+}
+export -f bitwarden::create

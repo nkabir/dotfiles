@@ -83,3 +83,40 @@ gig::bitwarden::sync() {
 	--show-output -- bash -c bitwarden::sync
 }
 export -f gig::bitwarden::sync
+
+
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+gig::bitwarden::create-folder() {
+
+    local folder_name="$1"
+    if [[ -z "$folder_name" ]]; then
+        logger::error "bitwarden::create-folder: Folder name required"
+        return 2
+    fi
+
+    # Check if the folder already exists
+    if bitwarden::get-folder "$folder_name"; then
+	logger::error "bitwarden::create-folder: Folder '$folder_name' already exists"
+	return 1
+    fi
+
+    # Build the encoded JSON for the folder
+    local encoded_json
+    encoded_json=$(jq -nc --arg name "$folder_name" '{name: $name}' | bw encode)
+    if [[ -z "$encoded_json" ]]; then
+        logger::error "bitwarden::create-folder: Failed to encode folder JSON"
+        return 3
+    fi
+
+    # Create the folder
+    if bitwarden::create folder "$encoded_json"; then
+        logger::info "Folder '$folder_name' created successfully"
+        return 0
+    else
+        logger::error "bitwarden::create-folder: Failed to create folder '$folder_name'"
+        return 4
+    fi
+
+}
+export -f gig::bitwarden::create-folder
