@@ -12,16 +12,18 @@ HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
   # lock                                        Lock the vault and destroy active session keys.
   # sync [options]                              Pull the latest vault data from server.
   # login [options] [email] [password]          Log into a user account.
+  # unlock [options] [password]                 Unlock the vault and return a new session key.
+
+
+  # status                                      Show server, last sync, user information, and vault status.
 
 
   # sdk-version                                 Print the SDK version.
-  # unlock [options] [password]                 Unlock the vault and return a new session key.
   # generate [options]                          Generate a password/passphrase.
   # encode                                      Base 64 encode stdin.
   # config [options] <setting> [value]          Configure CLI settings.
   # update                                      Check for updates.
   # completion [options]                        Generate shell completions.
-  # status                                      Show server, last sync, user information, and vault status.
   # list [options] <object>                     List an array of objects from the vault.
   # get [options] <object> <id>                 Get an object from the vault.
   # create [options] <object> [encodedJson]     Create an object in the vault.
