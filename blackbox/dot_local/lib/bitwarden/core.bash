@@ -562,3 +562,68 @@ bitwarden::edit() {
     fi
 }
 export -f bitwarden::edit
+
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# bitwarden::delete
+# Usage:
+#   bitwarden::delete <object> <id> [--permanent] [--organizationid <orgid>]
+bitwarden::delete() {
+    local object=""
+    local id=""
+    local permanent=0
+    local organizationid=""
+    local args=()
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            item|attachment|folder|org-collection)
+                if [[ -n "$object" ]]; then
+                    logger::error "Multiple objects specified: $object and $1"
+                    return 1
+                fi
+                object="$1"
+                shift
+                ;;
+            --permanent|-p)
+                permanent=1
+                shift
+                ;;
+            --organizationid)
+                organizationid="$2"
+                shift 2
+                ;;
+            -*)
+                logger::error "Unknown option: $1"
+                return 1
+                ;;
+            *)
+                if [[ -z "$id" ]]; then
+                    id="$1"
+                    shift
+                else
+                    logger::error "Unexpected argument: $1"
+                    return 1
+                fi
+                ;;
+        esac
+    done
+
+    if [[ -z "$object" || -z "$id" ]]; then
+        logger::error "bitwarden::delete: <object> and <id> are required"
+        return 2
+    fi
+
+    [[ $permanent -eq 1 ]] && args+=(--permanent)
+    [[ -n "$organizationid" ]] && args+=(--organizationid "$organizationid")
+
+    logger::info "Deleting Bitwarden $object $id${permanent:+ (permanent)}"
+    if bw delete "$object" "$id" "${args[@]}"; then
+        logger::info "Bitwarden $object $id deleted successfully"
+        return 0
+    else
+        logger::error "Failed to delete Bitwarden $object $id"
+        return 3
+    fi
+}
+export -f bitwarden::delete
