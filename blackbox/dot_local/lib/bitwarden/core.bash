@@ -489,3 +489,76 @@ bitwarden::create() {
     fi
 }
 export -f bitwarden::create
+
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# bitwarden::edit
+# Usage:
+#   bitwarden::edit <object> <id> [encoded_json] [--organizationid <orgid>] [--help]
+bitwarden::edit() {
+    local object=""
+    local id=""
+    local encoded_json=""
+    local organizationid=""
+    local help=0
+    local args=()
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            item|item-collections|folder|org-collection)
+                if [[ -z "$object" ]]; then
+                    object="$1"
+                    shift
+                else
+                    logger::error "Multiple objects specified: $object and $1"
+                    return 1
+                fi
+                ;;
+            --organizationid)
+                organizationid="$2"
+                shift 2
+                ;;
+            -h|--help)
+                help=1
+                shift
+                ;;
+            -*)
+                logger::error "Unknown option: $1"
+                return 1
+                ;;
+            *)
+                if [[ -z "$id" ]]; then
+                    id="$1"
+                    shift
+                elif [[ -z "$encoded_json" ]]; then
+                    encoded_json="$1"
+                    shift
+                else
+                    logger::error "Unexpected argument: $1"
+                    return 1
+                fi
+                ;;
+        esac
+    done
+
+    if [[ $help -eq 1 ]]; then
+        echo "Usage: bitwarden::edit <object> <id> [encoded_json] [--organizationid <orgid>] [--help]"
+        return 0
+    fi
+
+    if [[ -z "$object" || -z "$id" ]]; then
+        logger::error "bitwarden::edit: <object> and <id> are required"
+        return 2
+    fi
+
+    [[ -n "$organizationid" ]] && args+=(--organizationid "$organizationid")
+
+    logger::info "Editing Bitwarden $object $id"
+    if [[ -n "$encoded_json" ]]; then
+        bw edit "$object" "$id" "$encoded_json" "${args[@]}"
+    else
+        bw edit "$object" "$id" "${args[@]}"
+    fi
+}
+export -f bitwarden::edit
