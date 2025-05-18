@@ -8,6 +8,9 @@ unset _LOGGER_CORE
 unset _BITWARDEN_CORE
 . ~/.local/lib/bitwarden/core.bash
 
+unset _GIG_BITWARDEN
+. ~/.local/gig/bitwarden/core.bash
+
 unset _SKATE_CORE
 . ~/.local/lib/skate/core.bash
 
@@ -24,8 +27,5 @@ unset _SKATE_CORE
 
 # unset _VAULT_CORE
 # . ~/.local/gig/vault/core.bash
-
-unset _GIG_PWMANAGER
-. ~/.local/gig/pwmanager/core.bash
 
 # bw sync

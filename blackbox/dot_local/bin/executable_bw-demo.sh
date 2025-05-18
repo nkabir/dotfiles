@@ -2,6 +2,9 @@
 # bin/bw-demo.sh
 # shellcheck shell=bash
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+set -eo pipefail
+
+
 HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
     &> /dev/null && pwd 2> /dev/null; )";
 
@@ -36,5 +39,16 @@ HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
   # help [command]                              display help for command
 
 
-. "${HERE:?}/../lib/logger/core.bash"
-. "${HERE:?}/../lib/bitwarden/core.bash"
+. "${HERE:?}/../gig/bitwarden/core.bash"
+
+
+# @cmd login into Bitwarden
+# @alias 1
+login() {
+
+    gig::bitwarden::login
+}
+
+
+
+eval "$(argc --argc-eval "$0" "$@")"

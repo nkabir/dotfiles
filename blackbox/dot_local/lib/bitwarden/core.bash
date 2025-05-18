@@ -53,6 +53,7 @@ bitwarden::login() {
     local sso=""
     local args=()
 
+
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --email)
@@ -79,6 +80,10 @@ bitwarden::login() {
                 sso="--sso"
                 shift
                 ;;
+	    --raw)
+		raw="--raw"
+		shift
+		;;
             -*)
                 logger::error "Unknown option: $1"
                 return 1
@@ -97,6 +102,8 @@ bitwarden::login() {
     [[ -n "$code" ]] && args+=("--code" "$code")
     [[ -n "$apikey" ]] && args+=("$apikey")
     [[ -n "$sso" ]] && args+=("$sso")
+    [[ -n "$raw" ]] && args+=("$raw")
+
 
     logger::info "Attempting Bitwarden login..."
 
@@ -190,6 +197,7 @@ bitwarden::unlock() {
         esac
     done
 
+
     [[ -n "$passwordenv" ]] && args+=(--passwordenv "$passwordenv")
     [[ -n "$passwordfile" ]] && args+=(--passwordfile "$passwordfile")
     [[ $raw -eq 1 ]] && args+=(--raw)
@@ -206,7 +214,7 @@ bitwarden::unlock() {
             return 2
         fi
     else
-        if session=$(bw unlock "${args[@]}" 2>/dev/null); then
+        if session=$(bw unlock "${args[@]}"); then
             logger::info "Bitwarden vault unlocked"
             [[ $raw -eq 1 ]] && echo "$session"
             return 0
