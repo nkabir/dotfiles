@@ -65,3 +65,12 @@ gig::bitwarden::unlock() {
     return 1
 }
 export -f gig::bitwarden::unlock
+
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+gig::bitwarden::status() {
+
+    gum spin --title "Querying Bitwarden login status..." \
+	--show-output -- bash -c bitwarden::status
+}
+export -f gig::bitwarden::status

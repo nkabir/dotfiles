@@ -143,16 +143,11 @@ bitwarden::status() {
     logger::info "Checking Bitwarden CLI status..."
 
     local status_json
-    if ! status_json="$(bw status 2>/dev/null)"; then
+    if ! status_json="$(bw status)"; then
         logger::error "Failed to get Bitwarden status"
         return 2
     fi
-
-    if [[ $raw_output -eq 1 ]]; then
-        echo "$status_json"
-    else
-        jq . <<< "$status_json"
-    fi
+    echo "$status_json"
 }
 export -f bitwarden::status
 
