@@ -25,5 +25,7 @@ unset _SKATE_CORE
 # unset _VAULT_CORE
 # . ~/.local/gig/vault/core.bash
 
+unset _GIG_PWMANAGER
+. ~/.local/gig/pwmanager/core.bash
 
 # bw sync
