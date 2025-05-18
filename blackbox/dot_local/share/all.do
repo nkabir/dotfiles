@@ -11,10 +11,6 @@ unset _BITWARDEN_CORE
 unset _SKATE_CORE
 . ~/.local/lib/skate/core.bash
 
-
-# unset _BITWARDEN_CORE
-# . ~/.local/lib/bitwarden/core.bash
-
 # unset _GPG_CORE
 # . ~/.local/lib/gpg/core.bash
 
