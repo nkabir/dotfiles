@@ -26,6 +26,21 @@ bitwarden::lock() {
 export -f bitwarden::lock
 
 
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+bitwarden::sync() {
+
+    # Sync the vault with the server
+    if bw sync ; then
+	logger::info "Bitwarden vault synced successfully."
+    else
+	logger::error "Failed to sync Bitwarden vault."
+    fi
+
+}
+export -f bitwarden::sync
+
+
 # :::::::::::::::::::::::::::::::::::::::::::::::::::
 . "${BITWARDEN_HERE}/login.bash"
 . "${BITWARDEN_HERE}/status.bash"
+. "${BITWARDEN_HERE}/unlock.bash"

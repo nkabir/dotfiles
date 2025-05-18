@@ -8,19 +8,26 @@ unset _LOGGER_CORE
 unset _BITWARDEN_CORE
 . ~/.local/lib/bitwarden/core.bash
 
-unset _GPG_CORE
-. ~/.local/lib/gpg/core.bash
+unset _SKATE_CORE
+. ~/.local/lib/skate/core.bash
 
-unset _YADM_CORE
-. ~/.local/lib/yadm/core.bash
 
-unset _GUM_CORE
-. ~/.local/lib/gum/core.bash
+# unset _BITWARDEN_CORE
+# . ~/.local/lib/bitwarden/core.bash
+
+# unset _GPG_CORE
+# . ~/.local/lib/gpg/core.bash
+
+# unset _YADM_CORE
+# . ~/.local/lib/yadm/core.bash
+
+# unset _GUM_CORE
+# . ~/.local/lib/gum/core.bash
 
 ######################################
 
-unset _VAULT_CORE
-. ~/.local/gig/vault/core.bash
+# unset _VAULT_CORE
+# . ~/.local/gig/vault/core.bash
 
 
 # bw sync
