@@ -220,3 +220,81 @@ bitwarden::unlock() {
     fi
 }
 export -f bitwarden::unlock
+
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# bitwarden::list
+# Usage:
+#   bitwarden::list <object> [--url <url>] [--folderid <id>] [--collectionid <id>] [--organizationid <id>] [--trash] [--search <term>]
+bitwarden::list() {
+    local object=""
+    local url=""
+    local folderid=""
+    local collectionid=""
+    local organizationid=""
+    local trash=""
+    local search=""
+    local args=()
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            items|folders|collections|organizations|org-collections|org-members)
+                if [[ -n "$object" ]]; then
+                    logger::error "Multiple objects specified: $object and $1"
+                    return 1
+                fi
+                object="$1"
+                shift
+                ;;
+            --url)
+                url="$2"
+                shift 2
+                ;;
+            --folderid)
+                folderid="$2"
+                shift 2
+                ;;
+            --collectionid)
+                collectionid="$2"
+                shift 2
+                ;;
+            --organizationid)
+                organizationid="$2"
+                shift 2
+                ;;
+            --trash)
+                trash="--trash"
+                shift
+                ;;
+            --search)
+                search="$2"
+                shift 2
+                ;;
+            -*)
+                logger::error "Unknown option: $1"
+                return 1
+                ;;
+            *)
+                logger::error "Unexpected argument: $1"
+                return 1
+                ;;
+        esac
+    done
+
+    if [[ -z "$object" ]]; then
+        logger::error "No object specified for bitwarden::list"
+        return 2
+    fi
+
+    [[ -n "$url" ]] && args+=(--url "$url")
+    [[ -n "$folderid" ]] && args+=(--folderid "$folderid")
+    [[ -n "$collectionid" ]] && args+=(--collectionid "$collectionid")
+    [[ -n "$organizationid" ]] && args+=(--organizationid "$organizationid")
+    [[ -n "$trash" ]] && args+=("$trash")
+    [[ -n "$search" ]] && args+=(--search "$search")
+
+    logger::info "Listing Bitwarden $object: ${args[*]}"
+    bw list "$object" "${args[@]}"
+}
+export -f bitwarden::list

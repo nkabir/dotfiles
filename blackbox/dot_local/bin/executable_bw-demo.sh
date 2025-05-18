@@ -20,11 +20,12 @@ HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
 # config [options] <setting> [value]          Configure CLI settings.
 # update                                      Check for updates.
 # completion [options]                        Generate shell completions.
-
 # list [options] <object>                     List an array of objects from the vault.
 
 
 # get [options] <object> <id>                 Get an object from the vault.
+
+
 # create [options] <object> [encodedJson]     Create an object in the vault.
 # edit [options] <object> <id> [encodedJson]  Edit an object from the vault.
 # delete [options] <object> <id>              Delete an object from the vault.

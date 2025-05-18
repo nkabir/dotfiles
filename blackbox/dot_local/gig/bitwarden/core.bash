@@ -74,3 +74,12 @@ gig::bitwarden::status() {
 	--show-output -- bash -c bitwarden::status
 }
 export -f gig::bitwarden::status
+
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+gig::bitwarden::sync() {
+
+    gum spin --title "Syncing Bitwarden vault..." \
+	--show-output -- bash -c bitwarden::sync
+}
+export -f gig::bitwarden::sync
