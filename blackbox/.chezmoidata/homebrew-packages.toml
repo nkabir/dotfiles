@@ -1,8 +1,8 @@
 
 [homebrew]
 common = [
-"aider",
-"ansible",
+"aider", # terminal-based ai
+"ansible", #
 "ansible-builder",
 "ansible-cmdb",
 "ansible-creator",
@@ -11,6 +11,7 @@ common = [
 "bat",
 "bitwarden-cli",
 "chezmoi",
+"cookiecutter", # generate templates
 "direnv",
 "fd",
 "fzf",
@@ -18,7 +19,7 @@ common = [
 "git",
 "git-lfs",
 # "goredo",
-"gum",
+"gum", # improved interface for bash scripts
 "htop",
 "jq",
 "kcl-lang/tap/kcl",
