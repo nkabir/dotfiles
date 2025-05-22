@@ -14,6 +14,9 @@ unset _GIG_BITWARDEN
 unset _SKATE_CORE
 . ~/.local/lib/skate/core.bash
 
+unset _RAGE_CORE
+. ~/.local/lib/rage/core.bash
+
 # unset _GPG_CORE
 # . ~/.local/lib/gpg/core.bash
 

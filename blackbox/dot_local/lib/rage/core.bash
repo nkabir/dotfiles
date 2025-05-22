@@ -11,4 +11,12 @@ RAGE_HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 # Load the rage functions
 . "${RAGE_HERE:?}/../logger/core.bash"
-. "${RAGE_HERE:?}/encrypt.bash"
+
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+rage::keygen() {
+
+    rage-keygen
+
+}
+export -f rage::keygen

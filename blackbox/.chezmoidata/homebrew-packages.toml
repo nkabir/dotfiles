@@ -26,6 +26,7 @@ common = [
 "lnav",
 "mani",
 "node@22",
+"rage", # rust-based age encryption
 "redo",
 "ripgrep",
 "skate",
