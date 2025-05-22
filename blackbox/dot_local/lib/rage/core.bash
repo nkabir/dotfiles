@@ -20,3 +20,25 @@ rage::keygen() {
 
 }
 export -f rage::keygen
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# rage::encrypt
+# Usage: rage::encrypt <age-recipient-or-key> <plaintext>
+# Encrypts the given plaintext using the provided age recipient (public key or passphrase)
+rage::encrypt() {
+    local key="$1"
+    local plaintext="$2"
+
+    if [[ -z "$key" || -z "$plaintext" ]]; then
+        logger::error "Usage: rage::encrypt <age-recipient-or-key> <plaintext>"
+        return 2
+    fi
+
+    # If the key starts with "age1", treat as recipient public key; otherwise, treat as passphrase
+    if [[ "$key" =~ ^age1 ]]; then
+        echo -n "$plaintext" | rage -e -r "$key"
+    else
+        echo -n "$plaintext" | rage -e -p --passphrase="$key"
+    fi
+}
+export -f rage::encrypt
