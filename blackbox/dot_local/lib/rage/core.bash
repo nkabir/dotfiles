@@ -42,3 +42,26 @@ rage::encrypt() {
     fi
 }
 export -f rage::encrypt
+
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# rage::decrypt
+# Usage: rage::decrypt <age-key-or-passphrase> <ciphertext>
+# Decrypts the given ciphertext using the provided age key (private key file, or passphrase)
+rage::decrypt() {
+    local key="$1"
+    local ciphertext="$2"
+
+    if [[ -z "$key" || -z "$ciphertext" ]]; then
+        logger::error "Usage: rage::decrypt <age-key-or-passphrase> <ciphertext>"
+        return 2
+    fi
+
+    # If the key starts with "age1", treat as identity file; otherwise, treat as passphrase
+    if [[ "$key" =~ ^age1 ]]; then
+        echo -n "$ciphertext" | rage -d -i "$key"
+    else
+        echo -n "$ciphertext" | rage -d -p --passphrase="$key"
+    fi
+}
+export -f rage::decrypt
