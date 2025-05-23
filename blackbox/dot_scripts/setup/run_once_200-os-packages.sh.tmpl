@@ -1,15 +1,29 @@
 #!/usr/bin/env bash
 
+# This script installs necessary packages for a specific Linux
+# distribution. ONLY install packages needed for CWIQ-Seed. Additional
+# packages should be installed via Ansible.
+
 {{- if .isUbuntu }}
 # Ubuntu specific packages
 echo "Installing Ubuntu packages..."
 sudo apt update
 sudo apt install -y \
-     molly-guard \
      build-essential \
-     libssl-dev \
+     ccze \
+     dconf-cli \
+     fonts-emojione \
      libffi-dev \
-     python3-dev
+     libsecret-1-0 \
+     libssl-dev \
+     molly-guard \
+     plocate \
+     python3-dev \
+     tilix \
+     unzip \
+     wget \
+     xclip \
+     zip
 
 sudo apt upgrade -y
 {{- else if .isAlmaLinux }}
@@ -17,11 +31,22 @@ sudo apt upgrade -y
 echo "Installing Alma Linux packages..."
 sudo dnf update -y
 sudo dnf install -y \
+     ccze \
+     dconf \
+     fonts-emojione \
      gcc \
+     libffi-devel \
+     libsecret \
      make \
      openssl-devel \
-     libffi-devel \
      python3-devel \
+     plocate \
+     tilix \
+     unzip \
+     wget \
+     xclip \
+     zip
+
 {{- else }}
 echo "Unknown OS, skipping package installation"
 {{- end }}

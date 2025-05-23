@@ -2,8 +2,8 @@
   user = {{ .chezmoi.username }}
 
 [user]
-  name = "Norman Kabir"
-  email = "nkabir@gmail.com"
+  name = {{ .operator }}
+  email = {{ .email.free }}
 
 [color]
   ui = auto
@@ -48,15 +48,15 @@
 	tags = log -n1 --pretty=format:%h%d
 
 [hub]
-  protocol = https
+  protocol = ssh
 
 [core]
     pager = less -R
 	autocrlf = false
 	sshCommand = ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no
 
-#[push]
-#    default = simple
+[push]
+    default = simple
 
 [branch]
     autosetuprebase = always
@@ -76,7 +76,7 @@
 #Mergetool can now be used to resolve the merge conflicts. You start it very easily with:
 #git mergetool
 [merge]
-    tool = meld
+	tool = meld
 [mergetool "meld"]
     # Choose one of these 2 lines (not both!) explained below.
     cmd = meld "$LOCAL" "$MERGED" "$REMOTE" --output "$MERGED"
@@ -90,7 +90,7 @@
 [safe]
 	directory = /home/linuxbrew/.linuxbrew/Library/Taps/homebrew/homebrew-core
 	directory = /home/linuxbrew/.linuxbrew
-	directory = /home/nkabir/code/dev/cridev/code/service/gollum/var/gollum
+
 [init]
 	defaultBranch = main
 

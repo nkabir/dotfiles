@@ -18,22 +18,14 @@ mkdir -p "$SYMBOLS_DIR"
 # Configuration
 NERD_FONTS_VERSION="v3.1.1"
 NERD_FONTS_REPO="https://github.com/ryanoasis/nerd-fonts"
-FONT_NAMES=("FiraCode" "JetBrainsMono" "Hack")
+FONT_NAMES=(
+    "AnonymousPro"
+    "FantasqueSansMono"
+    "FiraCode"
+    "JetBrainsMono"
+    "Hack")
 
 echo "Installing Nerd Fonts version $NERD_FONTS_VERSION"
-
-# Ensure required tools are installed
-{{ if .isUbuntu -}}
-if ! command -v wget &> /dev/null || ! command -v unzip &> /dev/null; then
-    echo "Installing required packages..."
-    sudo apt-get update && sudo apt-get install -y wget unzip
-fi
-{{ else if .isAlmaLinux -}}
-if ! command -v wget &> /dev/null || ! command -v unzip &> /dev/null; then
-    echo "Installing required packages..."
-    sudo dnf install -y wget unzip
-fi
-{{ end }}
 
 # Download and install fonts
 for FONT_NAME in "${FONT_NAMES[@]}"; do

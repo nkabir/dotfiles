@@ -3,15 +3,14 @@
 [common]
 # Directories common to all systems
 dirs = [
-  { path = ".config", mode = "0700" },
-  { path = ".local/bin", mode = "0755" },
-  { path = ".local/share", mode = "0755" },
+  # { path = ".config", mode = "0700" },
+  { path = ".local/bin", mode = "0700" },
+  # { path = ".local/share", mode = "0755" },
   { path = ".ssh", mode = "0700" },
   { path = ".cache", mode = "0755" },
   { path = ".gnupg", mode = "0700" },
+  { path = "mnt", mode = "0755" },
   { path = ".config/systemd/user", mode = "0755" },
-  { path = "realms/cwiq/github", mode = "0755" },
-  { path = "realms/rkx/gitlab", mode = "0755" },
 ]
 
 [ubuntu]
