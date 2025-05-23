@@ -1,82 +1,16 @@
-# ChezMoi repository
+# Seed
+_Repeatable Developer Environments_
 
-The main namespace is `blackbox`. It is selected in `.chezmoiroot`.
+* [Documentation](https://tinyurl.com/cwid-seed-reference)
 
-## Modular Bash
+These settings must only apply to a user and their development
+host. Settings for realms and repositories must be configured in those
+environments directly.
 
-`bash` is the shell used to coordinate the environment. `bash` is
-configured to load snippets from `$HOME/.bashrc.d`.
+**This is not intended to be run in constrained, air-gapped
+environments.**
 
+## Roots
 
-{{/* boolean feature tags */}}
-{{- $ephemeral := false -}}{{/* true if this machine is ephemeral, e.g. a cloud or VM instance */}}
-{{- $work := false -}}{{/* true if this machine is a work machine */}}
-{{- $headless := false -}}{{/* true if this machine does not have a screen and keyboard */}}
-{{- $personal := false -}}{{/* true if this machine should have personal secrets */}}
-{{- "" -}}
-
-{{- $osID := .chezmoi.os -}}
-{{- if (and (eq .chezmoi.os "linux") (hasKey .chezmoi.osRelease "id")) -}}
-{{-   $osID = printf "%s-%s" .chezmoi.os .chezmoi.osRelease.id -}}
-{{- end -}}
-
-{{/* detect GitHub codespaces, VSCode remote containers, Docker containers, Multipass VMs, and Vagrant boxes */}}
-{{- if or (env "CODESPACES") (env "REMOTE_CONTAINERS_IPC") (eq .chezmoi.username "root" "ubuntu" "vagrant" "vscode") -}}
-{{-   $ephemeral = true -}}
-{{-   $headless = true -}}
-{{- end -}}
-
-{{/* work around unreliable hostname on darwin */}}
-{{- $hostname := .chezmoi.hostname -}}
-{{- if eq .chezmoi.os "darwin" -}}
-{{-   $computerName := output "scutil" "--get" "ComputerName" | trim -}}
-{{-   if eq $computerName "Tom’s Laptop" -}}
-{{-     $hostname = "toms-laptop" -}}
-{{-   else if eq $computerName "Tom’s MacBook Air" -}}
-{{-     $hostname = "toms-mba" -}}
-{{-   else -}}
-{{-     $hostname = $computerName -}}
-{{-   end -}}
-{{- end -}}
-
-{{- if eq .chezmoi.os "windows" -}}
-{{-   $ephemeral = true -}}
-{{- end -}}
-
-{{- if not $ephemeral -}}
-{{-   if eq $hostname "legion" -}}
-{{-     $work = true -}}
-{{-   else if eq $hostname "thinkpad" -}}
-{{-     $personal = true -}}
-{{-   else if eq $hostname "toms-laptop" -}}
-{{-     $personal = true -}}
-{{-   else if eq $hostname "toms-mba" -}}
-{{-     $personal = true -}}
-{{-   else if eq $hostname "ubuntu" -}}
-{{-     $headless = true -}}
-{{-     $personal = true -}}
-{{-   else if stdinIsATTY -}}
-{{-     $headless = promptBoolOnce . "headless" "headless" -}}
-{{-     $ephemeral = promptBoolOnce . "ephemeral" "ephemeral" -}}
-{{-   else -}}
-{{-     $ephemeral = true -}}
-{{-     $headless = true -}}
-{{-   end -}}
-{{- end -}}
-
-{{- $email := "twpayne@gmail.com" -}}
-{{- if $work -}}
-{{-   $email = "tom.payne@flarm.com" -}}
-{{- end -}}
-
-[data]
-    ephemeral = {{ $ephemeral }}
-    email = {{ $email | quote }}
-    work = {{ $work }}
-    headless = {{ $headless }}
-    hostname = {{ $hostname | quote }}
-    personal = {{ $personal }}
-    osid = {{ $osID | quote }}
-
-[github]
-    refreshPeriod = "12h"
+* blackbox - open source resource
+* sandbox - experiments that are regularly cleared

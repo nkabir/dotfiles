@@ -1,0 +1,32 @@
+#!/bin/bash
+
+# This script will be executed once by chezmoi to set up the home directory structure
+# {{ $dirData := joinPath .chezmoi.sourceDir ".chezmoidata/developer-folders.toml" | include | fromToml }}
+
+echo "Setting up home directory structure..."
+
+# Create common directories
+{{ range $dirData.common.dirs }}
+mkdir -p "$HOME/{{ .path }}"
+chmod {{ .mode }} "$HOME/{{ .path }}"
+echo "Created directory: $HOME/{{ .path }} with mode {{ .mode }}"
+{{ end }}
+
+# Create OS-specific directories
+{{ if .isUbuntu }}
+# Ubuntu-specific directories
+{{ range $dirData.ubuntu.dirs }}
+mkdir -p "$HOME/{{ .path }}"
+chmod {{ .mode }} "$HOME/{{ .path }}"
+echo "Created Ubuntu directory: $HOME/{{ .path }} with mode {{ .mode }}"
+{{ end }}
+{{ else if .isAlmaLinux }}
+# AlmaLinux-specific directories
+{{ range $dirData.almalinux.dirs }}
+mkdir -p "$HOME/{{ .path }}"
+chmod {{ .mode }} "$HOME/{{ .path }}"
+echo "Created AlmaLinux directory: $HOME/{{ .path }} with mode {{ .mode }}"
+{{ end }}
+{{ end }}
+
+echo "Home directory structure setup complete."

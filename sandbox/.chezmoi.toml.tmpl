@@ -1,0 +1,15 @@
+{{- $email := promptStringOnce . "email" "Email address" -}}
+{{- $operator :=
+    output (joinPath .chezmoi.sourceDir
+    "../common/scripts/get-full-name.py") -}}
+{{- $exenv :=
+    output (joinPath .chezmoi.sourceDir
+    "../common/scripts/get-exenv.py") -}}
+
+# Main ChezMoi configuration file (sandbox)
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+[data]
+  email = {{ $email | quote }}
+  operator = {{ $operator | quote }}
+  exenv = {{ $exenv | quote }} # execution environment

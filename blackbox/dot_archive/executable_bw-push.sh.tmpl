@@ -1,0 +1,87 @@
+#!/bin/bash
+# ChezMoi template for Bitwarden push script
+# This script pushes files from ~/.secrets to Bitwarden as attachments
+
+set -euo pipefail
+
+FIND_CMD="find"
+
+# Base directory for secrets
+SECRETS_DIR="$HOME/.secrets"
+
+# Ensure bw is logged in
+if ! bw status | grep -q "unlocked"; then
+  echo "Please unlock Bitwarden first with: bw unlock"
+  exit 1
+fi
+
+bw sync
+
+# Function to push a file as an attachment to a note
+push_attachment() {
+  local section="$1"
+  local subsection="$2"
+  local subsubsection="$3"
+  local filename="$4"
+  local note_name="${subsection}.${subsubsection}"
+  local file_path="$SECRETS_DIR/$section/$subsection/$subsubsection/$filename"
+
+  # Check if file exists
+  if [ ! -f "$file_path" ]; then
+    echo "File $file_path does not exist, skipping upload"
+    return 0
+  fi
+
+  # Get the item ID for the note
+  local item_id=$(bw get item "$note_name" --raw | jq -r '.id')
+
+  if [ -z "$item_id" ] || [ "$item_id" == "null" ]; then
+    echo "Note $note_name not found in Bitwarden, cannot upload attachment"
+    return 1
+  fi
+
+  # Check if attachment already exists
+  local existing_attachment_id=$(bw get item \
+				    "$note_name" --raw | \
+				     jq -r --arg filename "$filename" '.attachments[] | \
+				     select(.fileName==$filename) | .id')
+
+
+  if [ -n "$existing_attachment_id" ] && [ "$existing_attachment_id" != "null" ]; then
+    # Delete existing attachment
+    echo "Deleting existing attachment $filename from note $note_name"
+    bw delete attachment "$existing_attachment_id" --itemid "$item_id"
+
+    if [ $? -ne 0 ]; then
+      echo "Failed to delete existing attachment $filename from note $note_name"
+      return 1
+    fi
+  fi
+
+  # Upload new attachment
+  echo "Uploading $file_path as attachment $filename to note $note_name"
+  bw create attachment --file "$file_path" --itemid "$item_id"
+
+  if [ $? -ne 0 ]; then
+    echo "Failed to upload attachment $filename to note $note_name"
+    return 1
+  fi
+
+  return 0
+}
+
+# Process all secrets defined in the TOML file
+{{ range $section, $sectionData := .secrets }}
+  echo "Processing section: {{ $section }}"
+  {{ range $subsection, $subsectionData := $sectionData }}
+    echo "  Processing subsection: {{ $subsection }}"
+    {{ range $subsubsection, $data := $subsectionData }}
+      echo "    Processing subsubsection: {{ $subsubsection }}"
+      {{ range $data.files }}
+        push_attachment "{{ $section }}" "{{ $subsection }}" "{{ $subsubsection }}" "{{ . }}"
+      {{ end }}
+    {{ end }}
+  {{ end }}
+{{ end }}
+
+echo "Bitwarden push complete."

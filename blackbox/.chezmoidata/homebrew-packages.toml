@@ -1,24 +1,51 @@
 
 [homebrew]
 common = [
-"git",
-"vim",
-"tmux",
-"htop",
-"ripgrep",
-"fd",
+"aider", # terminal-based ai
+"ansible", #
+"ansible-builder",
+"ansible-cmdb",
+"ansible-creator",
+"ansible-lint",
+"argc",
 "bat",
-"jq"
+"bitwarden-cli",
+"chezmoi",
+"cookiecutter", # generate templates
+"direnv",
+"fd",
+"fzf",
+"fzf-make",
+"git",
+"git-lfs",
+# "goredo",
+"gum", # improved interface for bash scripts
+"htop",
+"jq",
+"kcl-lang/tap/kcl",
+"lnav",
+"mani",
+"node@22",
+"rage", # rust-based age encryption
+"redo",
+"ripgrep",
+"skate",
+"starship",
+"the_silver_searcher",
+"tmux",
+"tree",
+"uv",
+"vim",
+"yadm",
+"yq",
 ]
 
 ubuntu = [
-"tree",
 "ncdu",
-"neofetch"
+"macchina",
 ]
 
 almalinux = [
-"tree",
 "nmap",
-"iftop"
+"iftop",
 ]
