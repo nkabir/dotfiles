@@ -1,8 +1,8 @@
 
 [homebrew]
 common = [
-"aider", # terminal-based ai
-"ansible", #
+"aider",
+"ansible",
 "ansible-builder",
 "ansible-cmdb",
 "ansible-creator",
