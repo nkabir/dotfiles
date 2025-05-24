@@ -2,6 +2,7 @@
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 
+# ls shortcut
 function l() {
   if [ -z "$1" ]; then
     ls -lhSt --color
