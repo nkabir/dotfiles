@@ -125,17 +125,23 @@ export -f gig::bitwarden::create-folder
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 gig::bitwarden::sync-ssh-keys() {
 
-    local ssh_key_path="$HOME/.ssh/id_rsa"
-    local ssh_pub_key_path="$HOME/.ssh/id_rsa.pub"
+    local ssh_keys
+    # get list of SSH key names from Bitwarden
+    ssh_keys=$(bitwarden::list items --search "ssh.key.ed25519" \
+        | jq -r '.[] | .name')
 
-    # Check if the SSH key files exist
-    if [[ ! -f "$ssh_key_path" || ! -f "$ssh_pub_key_path" ]]; then
-        logger::error "SSH key files not found at $ssh_key_path or $ssh_pub_key_path"
+    if [[ -z "$ssh_keys" ]]; then
+        logger::error "No SSH keys found in Bitwarden"
         return 1
     fi
 
-    # Sync the SSH keys to Bitwarden
-    bitwarden::sync-ssh-keys "$ssh_key_path" "$ssh_pub_key_path"
+    # Loop through each SSH key and sync it
+    while IFS= read -r key_name; do
+        gig::bitwarden::sync-ssh-key "$key_name"
+    done <<< "$ssh_keys"
+
+    return 0
+
 }
 export -f gig::bitwarden::sync-ssh-keys
 
@@ -153,9 +159,10 @@ gig::bitwarden::sync-ssh-key() {
     if [[ "$key_name" == *main ]]; then
         ln -sf "$HOME/.ssh/$key_name" "$HOME/.ssh/id_ed25519"
         chmod 600 "$HOME/.ssh/id_ed25519"
+        logger::info "SSH key synced to $HOME/.ssh/$key_name"
         logger::info "SSH key synced and symlinked to id_ed25519"
     else
-        logger::info "SSH key synced"
+        logger::info "SSH key synced to $HOME/.ssh/$key_name"
     fi
     chmod 600 "$HOME/.ssh/$key_name"
 
