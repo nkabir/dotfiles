@@ -35,6 +35,7 @@ logout() {
 sync() {
 
     gig::bitwarden::sync "$@"
+    gig::bitwarden::sync-ssh-keys
 
 }
 
@@ -55,9 +56,5 @@ sync-ssh-key() {
     gig::bitwarden::sync-ssh-key "$key" "$@"
 
 }
-
-
-
-
 
 eval "$(argc --argc-eval "$0" "$@")"
