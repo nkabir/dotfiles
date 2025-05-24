@@ -1,0 +1,9 @@
+{{- /* bitwarden prompts */ -}}
+{{- $cli := "Bitwarden CLI" -}}
+{{- $preface := "bitwarden::" -}}
+
+{{ template "prompt.bash.lib.tmpl" (
+dict
+        "cli" $cli
+        "preface" $preface
+) }}
