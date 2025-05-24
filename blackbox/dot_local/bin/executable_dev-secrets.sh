@@ -37,6 +37,9 @@ sync() {
     gig::bitwarden::sync "$@"
     gig::bitwarden::sync-ssh-keys
 
+    # enable ssh for git
+    git --git-dir $HOME/.local/share/chezmoi/.git \
+        remote set-url origin git@github.com:${GITHUB_ID:?}/dotfiles.git
 }
 
 
