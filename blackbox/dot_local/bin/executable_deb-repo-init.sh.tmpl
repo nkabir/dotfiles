@@ -1,0 +1,322 @@
+#!/usr/bin/env bash
+# deb-repo-init.sh - Initialize local Debian package repository following XDG conventions
+# Managed by ChezMoi. Do not edit.
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+{{- if .isUbuntu }}
+set -euo pipefail
+
+# Configuration following XDG conventions
+DEB_REPO_DIR="{{ .chezmoi.homeDir }}/.local/share/deb"
+POOL_DIR="${DEB_REPO_DIR}/pool"
+DISTS_DIR="${DEB_REPO_DIR}/dists"
+CACHE_DIR="{{ env "XDG_CACHE_HOME" | default (printf "%s/.cache" .chezmoi.homeDir) }}/deb"
+CONFIG_DIR="{{ env "XDG_CONFIG_HOME" | default (printf "%s/.config" .chezmoi.homeDir) }}/deb"
+
+# Repository metadata
+REPO_CODENAME="local"
+REPO_COMPONENT="main"
+REPO_ARCHITECTURE="amd64"
+REPO_ORIGIN="Local Repository"
+REPO_LABEL="local-deb-repo"
+REPO_DESCRIPTION="Local Debian package repository"
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+log_info() {
+    echo -e "${GREEN}[INFO]${NC} $1"
+}
+
+log_warn() {
+    echo -e "${YELLOW}[WARN]${NC} $1"
+}
+
+log_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+# Function to check dependencies
+check_dependencies() {
+    local missing_deps=()
+    local required_deps=("dpkg-scanpackages" "gzip" "apt-ftparchive")
+
+    for dep in "${required_deps[@]}"; do
+        if ! command -v "$dep" &> /dev/null; then
+            missing_deps+=("$dep")
+        fi
+    done
+
+    if [[ ${#missing_deps[@]} -gt 0 ]]; then
+        log_error "Missing dependencies: ${missing_deps[*]}"
+        log_info "Install with: sudo apt install dpkg-dev apt-utils"
+        return 1
+    fi
+
+    return 0
+}
+
+# Function to initialize repository structure
+init_repo_structure() {
+    log_info "Initializing local deb repository structure..."
+
+    # Create directory structure
+    mkdir -p "${POOL_DIR}/${REPO_COMPONENT}"
+    mkdir -p "${DISTS_DIR}/${REPO_CODENAME}/${REPO_COMPONENT}/binary-${REPO_ARCHITECTURE}"
+    mkdir -p "${DISTS_DIR}/${REPO_CODENAME}/${REPO_COMPONENT}/source"
+    mkdir -p "${CACHE_DIR}"
+    mkdir -p "${CONFIG_DIR}"
+
+    log_info "Created repository directories:"
+    log_info "  Repository root: ${DEB_REPO_DIR}"
+    log_info "  Pool: ${POOL_DIR}"
+    log_info "  Distributions: ${DISTS_DIR}"
+    log_info "  Cache: ${CACHE_DIR}"
+    log_info "  Config: ${CONFIG_DIR}"
+}
+
+# Function to create repository configuration
+create_repo_config() {
+    local conf_file="${DISTS_DIR}/${REPO_CODENAME}/Release"
+
+    cat > "${conf_file}" << EOF
+Origin: ${REPO_ORIGIN}
+Label: ${REPO_LABEL}
+Codename: ${REPO_CODENAME}
+Date: $(date -u '+%a, %d %b %Y %H:%M:%S UTC')
+Architectures: ${REPO_ARCHITECTURE}
+Components: ${REPO_COMPONENT}
+Description: ${REPO_DESCRIPTION}
+EOF
+
+    log_info "Created Release file at ${conf_file}"
+}
+
+# Function to create apt-ftparchive configuration
+create_ftparchive_config() {
+    local ftparchive_conf="${CONFIG_DIR}/apt-ftparchive.conf"
+
+    cat > "${ftparchive_conf}" << EOF
+Dir {
+    ArchiveDir "${DEB_REPO_DIR}";
+    CacheDir "${CACHE_DIR}";
+};
+
+TreeDefault {
+    Directory "pool/";
+};
+
+BinDirectory "pool/${REPO_COMPONENT}" {
+    Packages "dists/${REPO_CODENAME}/${REPO_COMPONENT}/binary-${REPO_ARCHITECTURE}/Packages";
+    BinOverride "/dev/null";
+    ExtraOverride "/dev/null";
+};
+
+Default {
+    Packages {
+        Extensions ".deb";
+        Compress ". gzip";
+    };
+};
+
+Contents {
+    Compress "gzip";
+};
+EOF
+
+    log_info "Created apt-ftparchive config at ${ftparchive_conf}"
+}
+
+# Function to create sources.list entry template
+create_sources_list_template() {
+    local sources_template="${CONFIG_DIR}/sources.list.local"
+
+    cat > "${sources_template}" << EOF
+# Local Debian repository
+# Add this line to /etc/apt/sources.list or create a new file in /etc/apt/sources.list.d/
+deb [trusted=yes] file://${DEB_REPO_DIR} ${REPO_CODENAME} ${REPO_COMPONENT}
+EOF
+
+    log_info "Created sources.list template at ${sources_template}"
+    log_info "To use this repository, add the following line to your apt sources:"
+    log_info "  deb [trusted=yes] file://${DEB_REPO_DIR} ${REPO_CODENAME} ${REPO_COMPONENT}"
+}
+
+# Function to create .gitignore
+create_gitignore() {
+    local gitignore_file="${DEB_REPO_DIR}/.gitignore"
+
+    cat > "${gitignore_file}" << 'EOF'
+# Deb repository .gitignore
+# Ignore downloaded packages but keep structure
+pool/**/*.deb
+pool/**/*.ddeb
+pool/**/*.tar.*
+pool/**/*.dsc
+
+# Keep important files
+!pool/.keep
+!dists/
+dists/*/Release.gpg
+dists/*/InRelease
+
+# Cache files
+.cache/
+EOF
+
+    log_info "Created .gitignore at ${gitignore_file}"
+}
+
+# Function to create keep files
+create_keep_files() {
+    touch "${POOL_DIR}/${REPO_COMPONENT}/.keep"
+    touch "${DISTS_DIR}/${REPO_CODENAME}/${REPO_COMPONENT}/binary-${REPO_ARCHITECTURE}/.keep"
+    log_info "Created .keep files for empty directories"
+}
+
+# Function to set permissions
+set_permissions() {
+    chmod 755 "${DEB_REPO_DIR}"
+    chmod 755 "${POOL_DIR}"
+    chmod 755 "${DISTS_DIR}"
+    chmod -R 644 "${DISTS_DIR}/${REPO_CODENAME}/Release"
+
+    log_info "Set appropriate permissions for repository"
+}
+
+# Function to update package indexes
+update_indexes() {
+    log_info "Updating package indexes..."
+
+    # Generate Packages file
+    cd "${DEB_REPO_DIR}"
+    dpkg-scanpackages -m "pool/${REPO_COMPONENT}" > "dists/${REPO_CODENAME}/${REPO_COMPONENT}/binary-${REPO_ARCHITECTURE}/Packages"
+    gzip -9c "dists/${REPO_CODENAME}/${REPO_COMPONENT}/binary-${REPO_ARCHITECTURE}/Packages" > "dists/${REPO_CODENAME}/${REPO_COMPONENT}/binary-${REPO_ARCHITECTURE}/Packages.gz"
+
+    # Update Release file with checksums
+    local release_file="dists/${REPO_CODENAME}/Release"
+    local temp_release=$(mktemp)
+
+    # Copy existing Release content except checksums
+    grep -v "^MD5Sum:\|^SHA1:\|^SHA256:\|^ " "${release_file}" > "${temp_release}" || true
+
+    # Add checksums
+    echo "MD5Sum:" >> "${temp_release}"
+    find dists/${REPO_CODENAME} -type f ! -name "Release*" -exec md5sum {} \; | sed 's|dists/'${REPO_CODENAME}'/| |' >> "${temp_release}"
+
+    echo "SHA1:" >> "${temp_release}"
+    find dists/${REPO_CODENAME} -type f ! -name "Release*" -exec sha1sum {} \; | sed 's|dists/'${REPO_CODENAME}'/| |' >> "${temp_release}"
+
+    echo "SHA256:" >> "${temp_release}"
+    find dists/${REPO_CODENAME} -type f ! -name "Release*" -exec sha256sum {} \; | sed 's|dists/'${REPO_CODENAME}'/| |' >> "${temp_release}"
+
+    mv "${temp_release}" "${release_file}"
+
+    log_info "Package indexes updated successfully"
+}
+
+# Function to validate repository structure
+validate_repo() {
+    local errors=0
+
+    # Check required directories
+    local required_dirs=(
+        "${POOL_DIR}/${REPO_COMPONENT}"
+        "${DISTS_DIR}/${REPO_CODENAME}/${REPO_COMPONENT}/binary-${REPO_ARCHITECTURE}"
+        "${CONFIG_DIR}"
+    )
+
+    for dir in "${required_dirs[@]}"; do
+        if [[ ! -d "$dir" ]]; then
+            log_error "Missing directory: $dir"
+            ((errors++))
+        fi
+    done
+
+    # Check Release file
+    if [[ ! -f "${DISTS_DIR}/${REPO_CODENAME}/Release" ]]; then
+        log_error "Missing Release file: ${DISTS_DIR}/${REPO_CODENAME}/Release"
+        ((errors++))
+    fi
+
+    if [[ $errors -eq 0 ]]; then
+        log_info "Repository validation passed"
+        return 0
+    else
+        log_error "Repository validation failed with $errors errors"
+        return 1
+    fi
+}
+
+# Function to show repository status
+show_status() {
+    log_info "Local deb repository status:"
+    echo "  Repository root: ${DEB_REPO_DIR}"
+    echo "  Pool directory: ${POOL_DIR}"
+    echo "  Distributions: ${DISTS_DIR}"
+    echo "  Config: ${CONFIG_DIR}"
+    echo "  Cache: ${CACHE_DIR}"
+    echo
+
+    # Count packages
+    local package_count
+    package_count=$(find "${POOL_DIR}" -name "*.deb" | wc -l 2>/dev/null || echo "0")
+    echo "  Total packages: ${package_count}"
+
+    # Show repository details
+    echo "  Codename: ${REPO_CODENAME}"
+    echo "  Component: ${REPO_COMPONENT}"
+    echo "  Architecture: ${REPO_ARCHITECTURE}"
+    echo
+
+    # Show sources.list entry
+    if [[ -f "${CONFIG_DIR}/sources.list.local" ]]; then
+        echo "  APT sources entry:"
+        echo "    $(cat "${CONFIG_DIR}/sources.list.local" | grep "^deb ")"
+    fi
+}
+
+# Main function
+main() {
+    case "${1:-init}" in
+        "init")
+            check_dependencies || exit 1
+            init_repo_structure
+            create_repo_config
+            create_ftparchive_config
+            create_sources_list_template
+            create_gitignore
+            create_keep_files
+            set_permissions
+            update_indexes
+            validate_repo
+            show_status
+            ;;
+        "update")
+            update_indexes
+            ;;
+        "status")
+            show_status
+            ;;
+        "validate")
+            validate_repo
+            ;;
+        *)
+            echo "Usage: $0 [init|update|status|validate]"
+            echo "  init     - Initialize repository structure (default)"
+            echo "  update   - Update package indexes"
+            echo "  status   - Show repository status"
+            echo "  validate - Validate repository structure"
+            exit 1
+            ;;
+    esac
+}
+
+main "$@"
+{{- else }}
+echo "This script is only for Ubuntu systems"
+exit 1
+{{- end }}

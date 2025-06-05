@@ -1,0 +1,24 @@
+{{- if .isUbuntu }}
+// APT configuration for local repository support
+// Managed by ChezMoi. Do not edit.
+// :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+// Cache directory following XDG conventions
+Dir::Cache {{ env "XDG_CACHE_HOME" | default (printf "%s/.cache" .chezmoi.homeDir) }}/apt;
+Dir::Cache::Archives {{ env "XDG_CACHE_HOME" | default (printf "%s/.cache" .chezmoi.homeDir) }}/apt/archives;
+
+// State directory for user-specific APT state
+Dir::State {{ env "XDG_DATA_HOME" | default (printf "%s/.local/share" .chezmoi.homeDir) }}/apt/state;
+
+// Logs directory
+Dir::Log {{ env "XDG_DATA_HOME" | default (printf "%s/.local/share" .chezmoi.homeDir) }}/apt/log;
+
+// Trust local repositories without GPG signatures
+APT::Get::AllowUnauthenticated "true";
+Acquire::AllowInsecureRepositories "true";
+Acquire::AllowDowngradeToInsecureRepositories "true";
+
+// Configuration for local repository handling
+APT::Get::Assume-Yes "false";
+APT::Get::Fix-Broken "true";
+{{- end }}
