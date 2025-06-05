@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# pip-xdg-dirs.sh - Show pip directories following XDG conventions
+# Managed by ChezMoi. Do not edit.
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+set -euo pipefail
+
+# XDG Base Directory variables
+XDG_DATA_HOME="${XDG_DATA_HOME:-{{ .chezmoi.homeDir }}/.local/share}"
+XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-{{ .chezmoi.homeDir }}/.config}"
+XDG_CACHE_HOME="${XDG_CACHE_HOME:-{{ .chezmoi.homeDir }}/.cache}"
+
+# Colors
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+echo -e "${GREEN}Python pip XDG Directory Information${NC}"
+echo "=============================================="
+echo
+
+echo -e "${BLUE}Configuration:${NC}"
+echo "  Config dir:     ${XDG_CONFIG_HOME}/pip"
+echo "  Config file:    ${XDG_CONFIG_HOME}/pip/pip.conf"
+echo
+
+echo -e "${BLUE}Data (Local Repository):${NC}"
+echo "  Repository:     ${XDG_DATA_HOME}/pip"
+echo "  Simple index:   ${XDG_DATA_HOME}/pip/simple"
+echo "  Packages:       ${XDG_DATA_HOME}/pip/packages"
+echo
+
+echo -e "${BLUE}Cache:${NC}"
+echo "  Cache dir:      ${XDG_CACHE_HOME}/pip"
+echo
+
+echo -e "${BLUE}pip User Installation:${NC}"
+echo "  User site:      $(python3 -m site --user-site 2>/dev/null || echo 'N/A')"
+echo "  User base:      $(python3 -m site --user-base 2>/dev/null || echo 'N/A')"
+echo
+
+if command -v pip &> /dev/null; then
+    echo -e "${BLUE}Current pip Configuration:${NC}"
+    echo "  pip version:    $(pip --version 2>/dev/null || echo 'N/A')"
+    echo "  Config files:   $(pip config list-files 2>/dev/null || echo 'N/A')"
+    echo
+
+    echo -e "${YELLOW}Active Configuration:${NC}"
+    pip config list 2>/dev/null || echo "  No configuration found"
+else
+    echo -e "${YELLOW}pip is not installed or not in PATH${NC}"
+fi
+
+echo
+echo -e "${GREEN}Environment Variables:${NC}"
+echo "  XDG_DATA_HOME:   ${XDG_DATA_HOME}"
+echo "  XDG_CONFIG_HOME: ${XDG_CONFIG_HOME}"
+echo "  XDG_CACHE_HOME:  ${XDG_CACHE_HOME}"
