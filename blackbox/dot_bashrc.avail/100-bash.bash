@@ -63,3 +63,4 @@ export XDG_DOWNLOAD_DIR=$HOME/Downloads
 export XDG_DESKTOP_DIR=$HOME/Desktop
 
 export HOST_RUNTIME=$(host-runtime)
+export EDITOR=${EDITOR:-vim}
