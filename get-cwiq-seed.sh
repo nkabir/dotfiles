@@ -4,8 +4,6 @@
 # CWIQ Seed Go
 #
 # This script is part of the CWIQ Seed project.
-# When changed, it must be placed in the "downloads" section
-# of the Bitbucket repository.
 #
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #
@@ -15,20 +13,16 @@
 # sudo privileges.
 #
 # urls:
-# - https://tinyurl.com/cwiq-seed-go redirects to
-# - https://bitbucket.org/cwiq/seed/downloads/cwiq-seed-go.sh
-#
-# We use Bitbucket to host the script because Github does not allow
-# raw file downloads from repositories. This is a workaround to allow
-# us to host the script and still allow users to download it.
+# - https://tinyurl.com/get-cwiq-seed redirects to
+# - https://raw.githubusercontent.com/cwiq-seed/dotfiles/refs/heads/develop/get-cwiq-seed.sh
 #
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 # Usage:
 # 1. Clone the dotfiles repository to your Github account
 #    https://github.com/cwiq-seed/dotfiles
 # 2. Execute this script with
-#    export GITHUB_USER="your-username"
-#    curl -L https://tinyurl.com/cwiq-seed-go | bash
+#    export GITHUB_ID="your-github-id"
+#    curl -L https://tinyurl.com/get-cwiq-seed | bash
 #
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 if [[ -f "/etc/redhat-release" ]]; then
@@ -36,4 +30,4 @@ if [[ -f "/etc/redhat-release" ]]; then
   sudo dnf install -y git
 fi
 
-sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply "${GITHUB_USER:?}"
+sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply "${GITHUB_ID:?}"
