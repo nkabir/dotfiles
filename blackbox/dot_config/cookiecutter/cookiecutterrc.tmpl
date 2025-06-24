@@ -1,0 +1,8 @@
+{{- $xdgCache := env "XDG_CACHE_HOME" -}}
+default_context:
+  full_name: "{{ .operator }}"
+  email: "{{ .email.free }}"
+
+# symlink to cookiecutter components
+cookiecutters_dir: "/home/{{ .chezmoi.username }}/.cookiecutters"
+replay_dir: "{{ $xdgCache }}/cookiecutter/"

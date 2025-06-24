@@ -1,0 +1,29 @@
+# pip configuration for local repository
+# Managed by ChezMoi. Do not edit.
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+[global]
+# Primary index (PyPI)
+index-url = https://pypi.org/simple/
+
+# Additional local repository following PEP 503
+extra-index-url = file://{{ .chezmoi.homeDir }}/.local/share/pip/simple/
+
+# Trust local repository
+trusted-host = localhost
+               127.0.0.1
+               0.0.0.0
+
+# Cache directory following XDG conventions
+cache-dir = {{ env "XDG_CACHE_HOME" | default (printf "%s/.cache" .chezmoi.homeDir) }}/pip
+
+[install]
+# Prefer local packages when available
+prefer-binary = true
+
+# User installation directory
+user = true
+
+[freeze]
+# Exclude system packages from freeze
+exclude-editable = true

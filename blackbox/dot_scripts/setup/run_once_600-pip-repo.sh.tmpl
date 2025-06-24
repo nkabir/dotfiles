@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# run_once_600-pip-repo.sh - Setup local pip repository
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+set -euo pipefail
+
+echo "Setting up local PEP 503 compliant pip repository..."
+
+# Initialize the repository structure
+if command -v pip-repo-init.sh &> /dev/null; then
+    pip-repo-init.sh init
+else
+    echo "Warning: pip-repo-init.sh not found in PATH"
+    # Fallback: create basic structure
+    PIP_REPO_DIR="{{ .chezmoi.homeDir }}/.local/share/pip"
+    mkdir -p "${PIP_REPO_DIR}/simple"
+    mkdir -p "${PIP_REPO_DIR}/packages"
+    touch "${PIP_REPO_DIR}/packages/.keep"
+    echo "Created basic repository structure"
+fi
+
+echo "Local pip repository setup complete!"
+echo
+echo "Usage:"
+echo "  pip-repo-add.sh download numpy           # Download and add numpy"
+echo "  pip-repo-add.sh add ./my-package.whl     # Add local package"
+echo "  pip-repo-add.sh list                     # List packages"
+echo "  pip install --user package-name         # Install with local repo"

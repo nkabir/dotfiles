@@ -17,6 +17,9 @@ dirs = [
 # Ubuntu-specific directories
 dirs = [
   { path = ".config/autostart", mode = "0755" },
+  { path = ".local/share/deb", mode = "0755" },
+  { path = ".config/deb", mode = "0755" },
+  { path = ".cache/deb", mode = "0755" },
 ]
 
 [almalinux]

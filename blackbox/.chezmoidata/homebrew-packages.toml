@@ -1,32 +1,34 @@
+# move these to their own packages
+# ---
+# "aider",
+# "ansible",
+# "ansible-builder",
+# "ansible-cmdb",
+# "ansible-creator",
+# "ansible-lint",
+# "cookiecutter",
+# "fzf",
+# "fzf-make",
+# "yadm",
 
 [homebrew]
 common = [
-"aider", # terminal-based ai
-"ansible", #
-"ansible-builder",
-"ansible-cmdb",
-"ansible-creator",
-"ansible-lint",
 "argc",
 "bat",
 "bitwarden-cli",
 "chezmoi",
-"cookiecutter", # generate templates
 "direnv",
 "fd",
-"fzf",
-"fzf-make",
 "git",
 "git-lfs",
-# "goredo",
-"gum", # improved interface for bash scripts
+"gum",
 "htop",
 "jq",
 "kcl-lang/tap/kcl",
 "lnav",
 "mani",
 "node@22",
-"rage", # rust-based age encryption
+"rage",
 "redo",
 "ripgrep",
 "skate",
@@ -36,7 +38,6 @@ common = [
 "tree",
 "uv",
 "vim",
-"yadm",
 "yq",
 ]
 

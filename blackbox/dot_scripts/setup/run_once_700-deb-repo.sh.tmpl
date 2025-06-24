@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# run_once_700-deb-repo.sh - Setup local Debian repository
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+{{- if .isUbuntu }}
+set -euo pipefail
+
+echo "Setting up local Debian package repository..."
+
+# Create necessary directories following XDG conventions
+mkdir -p "{{ env "XDG_DATA_HOME" | default (printf "%s/.local/share" .chezmoi.homeDir) }}/apt/state"
+mkdir -p "{{ env "XDG_DATA_HOME" | default (printf "%s/.local/share" .chezmoi.homeDir) }}/apt/log"
+mkdir -p "{{ env "XDG_CACHE_HOME" | default (printf "%s/.cache" .chezmoi.homeDir) }}/apt/archives"
+
+# Initialize the repository structure
+if command -v deb-repo-init.sh &> /dev/null; then
+    echo "Initializing Debian repository structure..."
+    deb-repo-init.sh init
+else
+    echo "Warning: deb-repo-init.sh not found in PATH"
+    # Fallback: create basic structure
+    DEB_REPO_DIR="{{ .chezmoi.homeDir }}/.local/share/deb"
+    mkdir -p "${DEB_REPO_DIR}/pool/main"
+    mkdir -p "${DEB_REPO_DIR}/dists/local/main/binary-amd64"
+    touch "${DEB_REPO_DIR}/pool/main/.keep"
+    echo "Created basic repository structure"
+fi
+
+echo "Local Debian repository setup complete!"
+echo
+echo "Usage:"
+echo "  deb-repo-add.sh download firefox      # Download and add Firefox"
+echo "  deb-repo-add.sh add ./package.deb     # Add local package"
+echo "  deb-repo-add.sh list                  # List packages"
+echo "  deb-xdg-dirs.sh                       # Show directory layout"
+echo
+echo "To use the repository, add this line to /etc/apt/sources.list.d/local.list:"
+echo "  deb [trusted=yes] file://{{ .chezmoi.homeDir }}/.local/share/deb local main"
+{{- else }}
+echo "Debian repository setup is only for Ubuntu systems"
+{{- end }}
