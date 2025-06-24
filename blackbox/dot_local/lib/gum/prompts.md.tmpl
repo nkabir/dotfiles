@@ -1,0 +1,9 @@
+{{- /* gum prompts */ -}}
+{{- $cli := "gum" -}}
+{{- $preface := "gum::" -}}
+
+{{ template "prompt.bash.lib.tmpl"
+(dict
+        "cli" $cli
+        "preface" $preface
+)}}

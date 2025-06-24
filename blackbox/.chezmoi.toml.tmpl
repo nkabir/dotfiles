@@ -13,9 +13,13 @@ ChezMoi Main Configuration
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 */ -}}
 
+{{- /* TODO add default githubId from environment */ -}}
+
+{{- $githubIdEnv := env "GITHUB_ID" -}}
+
 {{- $emailFree := promptStringOnce . "emailFree" "Email address hosted on free service" -}}
 {{- $emailCorp := promptStringOnce . "emailCorp" "Email address hosted on corp service" -}}
-{{- $githubId  := promptStringOnce . "githubId" "Github username" -}}
+{{- $githubId  := promptStringOnce . "githubId" "Github username" $githubIdEnv -}}
 
 {{- $yadmRepo  := "secrets" -}} # Name of Git repository that contains secrets
 

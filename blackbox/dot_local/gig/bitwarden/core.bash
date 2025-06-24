@@ -22,7 +22,7 @@ gig::bitwarden::login() {
 
     # Check if the login was successful
     if [[ $? -eq 0 ]]; then
-	logger::info "Login successful. BW_SESSION initialized."
+	logger::info "Login successful!"
 	skate::set BW_SESSION "$session"
 	return 0
     fi
@@ -120,3 +120,52 @@ gig::bitwarden::create-folder() {
 
 }
 export -f gig::bitwarden::create-folder
+
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+gig::bitwarden::sync-ssh-keys() {
+
+    local ssh_keys
+    # get list of SSH key names from Bitwarden
+    ssh_keys=$(bitwarden::list items --search "ssh.key.ed25519" \
+        | jq -r '.[] | .name')
+
+    if [[ -z "$ssh_keys" ]]; then
+        logger::error "No SSH keys found in Bitwarden"
+        return 1
+    fi
+
+    # Loop through each SSH key and sync it
+    while IFS= read -r key_name; do
+        gig::bitwarden::sync-ssh-key "$key_name"
+    done <<< "$ssh_keys"
+
+    return 0
+
+}
+export -f gig::bitwarden::sync-ssh-keys
+
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+gig::bitwarden::sync-ssh-key() {
+
+    local key_name="${1:?"Key name required"}"
+
+
+    bitwarden::get item "$key_name" \
+        | jq -r .sshKey.privateKey > "$HOME/.ssh/$key_name"
+
+    # if key_name ends with main, then symlink it to id_ed25519
+    if [[ "$key_name" == *main ]]; then
+        ln -sf "$HOME/.ssh/$key_name" "$HOME/.ssh/id_ed25519"
+        chmod 600 "$HOME/.ssh/id_ed25519"
+        logger::info "SSH key synced to $HOME/.ssh/$key_name"
+        logger::info "SSH key synced and symlinked to id_ed25519"
+    else
+        logger::info "SSH key synced to $HOME/.ssh/$key_name"
+    fi
+    chmod 600 "$HOME/.ssh/$key_name"
+
+    return 0
+}
+export -f gig::bitwarden::sync-ssh-key
