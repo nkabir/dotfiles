@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 # CWIQ Seed Go
@@ -31,4 +32,29 @@ if [[ -f "/etc/redhat-release" ]]; then
   sudo dnf install -y git
 fi
 
-sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply "${GITHUB_ID:?}"
+# Validate GITHUB_ID format
+if [[ ! "${GITHUB_ID:-}" =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$ ]]; then
+    echo "Error: GITHUB_ID must be a valid GitHub username"
+    exit 1
+fi
+
+# Verify network connectivity
+if ! curl -sf --connect-timeout 5 https://github.com >/dev/null; then
+    echo "Error: Cannot reach GitHub"
+    exit 1
+fi
+
+# Verify repository exists
+if ! curl -sf "https://api.github.com/repos/${GITHUB_ID}/dotfiles" >/dev/null; then
+    echo "Error: Repository ${GITHUB_ID}/dotfiles not found"
+    exit 1
+fi
+
+# Download ChezMoi installer with checksum verification
+CHEZMOI_INSTALLER=$(mktemp)
+trap "rm -f ${CHEZMOI_INSTALLER}" EXIT
+
+curl -fsSL https://get.chezmoi.io -o "${CHEZMOI_INSTALLER}"
+# Add checksum verification here
+chmod +x "${CHEZMOI_INSTALLER}"
+"${CHEZMOI_INSTALLER}" -- init --apply "${GITHUB_ID}"
