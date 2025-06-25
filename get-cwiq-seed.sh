@@ -18,7 +18,8 @@
 #
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 # Usage:
-# 1. Clone the dotfiles repository to your Github account
+#
+# 1. Fork the dotfiles repository to your Github account
 #    https://github.com/cwiq-seed/dotfiles
 # 2. Execute this script with
 #    export GITHUB_ID="your-github-id"
