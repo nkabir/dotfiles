@@ -42,19 +42,17 @@ if [[ -d "${XDG_DATA_HOME}/deb" ]]; then
     echo -e "${BLUE}Repository Status:${NC}"
 
     # Count packages
-    local package_count
     package_count=$(find "${XDG_DATA_HOME}/deb/pool" -name "*.deb" 2>/dev/null | wc -l || echo "0")
     echo "  Total packages: ${package_count}"
 
     # Check if repository files exist
-    local packages_file="${XDG_DATA_HOME}/deb/dists/local/main/binary-amd64/Packages"
-    local release_file="${XDG_DATA_HOME}/deb/dists/local/Release"
+    packages_file="${XDG_DATA_HOME}/deb/dists/local/main/binary-amd64/Packages"
+    release_file="${XDG_DATA_HOME}/deb/dists/local/Release"
 
     echo "  Packages file:  $([ -f "$packages_file" ] && echo "Present" || echo "Missing")"
     echo "  Release file:   $([ -f "$release_file" ] && echo "Present" || echo "Missing")"
 
     if [[ -f "$release_file" ]]; then
-        local last_update
         last_update=$(grep "^Date:" "$release_file" 2>/dev/null | cut -d' ' -f2- || echo "Unknown")
         echo "  Last update:    ${last_update}"
     fi
