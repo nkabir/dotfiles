@@ -13,6 +13,7 @@
 
 [homebrew]
 common = [
+"age"
 "argc",
 "bat",
 "bitwarden-cli",
