@@ -202,29 +202,19 @@ download_file() {
 
     local dest_file="${temp_dir}/${filename}"
 
-    log_info "Downloading from URL: $url" >&2
+    # Check if curl is available
+    if ! command -v curl >/dev/null 2>&1; then
+        log_error "curl not found. Please install curl to download from URLs." >&2
+        return 1
+    fi
 
-    # Use wget or curl to download
-    if command -v wget >/dev/null 2>&1; then
-        if wget --show-progress --user-agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" "$url" -O "$dest_file"; then
-            log_info "Downloaded: $filename ($(du -h "$dest_file" | cut -f1))" >&2
-            echo "$dest_file"
-            return 0
-        else
-            log_error "Failed to download with wget: $url" >&2
-            return 1
-        fi
-    elif command -v curl >/dev/null 2>&1; then
-        if curl -L --user-agent "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" -o "$dest_file" "$url" --progress-bar; then
-            log_info "Downloaded: $filename ($(du -h "$dest_file" | cut -f1))" >&2
-            echo "$dest_file"
-            return 0
-        else
-            log_error "Failed to download with curl: $url" >&2
-            return 1
-        fi
+    log_info "Downloading from URL: $url" >&2
+    if curl -L --user-agent "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" -o "$dest_file" "$url" --progress-bar; then
+        log_info "Downloaded: $filename ($(du -h "$dest_file" | cut -f1))" >&2
+        echo "$dest_file"
+        return 0
     else
-        log_error "Neither wget nor curl found. Cannot download from URL." >&2
+        log_error "Failed to download with curl: $url" >&2
         return 1
     fi
 }
