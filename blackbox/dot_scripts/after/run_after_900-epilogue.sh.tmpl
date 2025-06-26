@@ -4,15 +4,84 @@
 # It is responsible for cleaning up any temporary files or directories
 # and performing any final configuration tasks.
 
-# if $HOME/bin exsists, delete it
+set -euo pipefail
+
+# Colors for output
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+log_info() {
+    echo -e "${GREEN}[INFO]${NC} $1"
+}
+
+log_warn() {
+    echo -e "${YELLOW}[WARN]${NC} $1"
+}
+
+log_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+# Clean up legacy bin directory if it exists
 if [[ -d "$HOME/bin" ]]; then
-  rm -rf "$HOME/bin"
+    log_info "Removing legacy ~/bin directory"
+    rm -rf "$HOME/bin"
 fi
 
+# Install git-lfs if git-lfs command is available
+if command -v git-lfs &> /dev/null; then
+    log_info "Installing git-lfs hooks"
+    if git lfs install; then
+        log_info "Git LFS installed successfully"
+    else
+        log_warn "Failed to install git-lfs hooks"
+    fi
+else
+    log_warn "git-lfs not found in PATH, skipping LFS installation"
+fi
 
-# install git-lfs
-git lfs install
+# Configure git remote if conditions are met
+CHEZMOI_DIR="$HOME/.local/share/chezmoi"
 
-pushd $HOME/.local/share/chezmoi || exit 1
-git remote set-url origin "git@github.com:${GITHUB_ID:?}/dotfiles.git"
-popd || exit 1
+if [[ -d "$CHEZMOI_DIR" ]]; then
+    if pushd "$CHEZMOI_DIR" &> /dev/null; then
+        # Check if this is a git repository
+        if git rev-parse --git-dir &> /dev/null; then
+            # Check if GITHUB_ID is set
+            if [[ -n "${GITHUB_ID:-}" ]]; then
+                # Check if origin remote exists
+                if git remote get-url origin &> /dev/null; then
+                    current_origin=$(git remote get-url origin)
+                    expected_origin="git@github.com:${GITHUB_ID}/dotfiles.git"
+
+                    if [[ "$current_origin" != "$expected_origin" ]]; then
+                        log_info "Updating git remote origin from $current_origin to $expected_origin"
+                        if git remote set-url origin "$expected_origin"; then
+                            log_info "Git remote origin updated successfully"
+                        else
+                            log_error "Failed to update git remote origin"
+                        fi
+                    else
+                        log_info "Git remote origin already correctly configured"
+                    fi
+                else
+                    log_warn "No git remote origin found, skipping remote configuration"
+                fi
+            else
+                log_warn "GITHUB_ID environment variable not set, skipping git remote configuration"
+            fi
+        else
+            log_warn "$CHEZMOI_DIR is not a git repository, skipping git remote configuration"
+        fi
+
+        popd &> /dev/null
+    else
+        log_error "Failed to enter $CHEZMOI_DIR directory"
+    fi
+else
+    log_warn "ChezMoi directory $CHEZMOI_DIR not found, skipping git remote configuration"
+fi
+
+log_info "Epilogue script completed successfully"
