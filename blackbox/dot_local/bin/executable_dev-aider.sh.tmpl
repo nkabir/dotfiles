@@ -1,15 +1,173 @@
 #!/usr/bin/env bash
+# dev-aider.sh - Launch aider with optimal configuration
+# Managed by ChezMoi. Do not edit.
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-# export OLLAMA_HOST=10.1.200.123
-# export OLLAMA_API_BASE="http://${OLLAMA_HOST}:11434"
+set -eo pipefail
 
-MODEL="openrouter/meta-llama/llama-4-maverick-17b-128e-instruct:free"
+# Load logger library
+HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
+    &> /dev/null && pwd 2> /dev/null; )";
+. "${HERE}/../lib/logger/core.bash"
 
-# aider --model openrouter/deepseek/deepseek-r1
-aider \
-    --model "${MODEL:?}" \
-    --subtree-only
+# Default configuration
+DEFAULT_MODEL="openrouter/meta-llama/llama-4-maverick-17b-128e-instruct:free"
+AIDER_ARGS=(--subtree-only)
 
-# aider --model openrouter/meta-llama/llama-3-8b-instruct:free
-# aider --model openrouter/openai/o1
-# aider --model ollama/qwen2.5-coder:32b
+# Function to show usage
+show_usage() {
+    cat << EOF
+Usage: $0 [OPTIONS] [FILES...]
+
+Launch aider with optimized configuration for development work.
+
+Options:
+  -m, --model MODEL     Specify the AI model to use (default: ${DEFAULT_MODEL})
+  -o, --ollama HOST     Use Ollama with specified host
+  -f, --full            Remove --subtree-only restriction
+  -h, --help            Show this help message
+
+Models:
+  Free models (recommended for testing):
+    openrouter/meta-llama/llama-3-8b-instruct:free
+    openrouter/meta-llama/llama-4-maverick-17b-128e-instruct:free
+    openrouter/deepseek/deepseek-r1
+
+  Premium models (require API credits):
+    openrouter/openai/o1
+    openrouter/anthropic/claude-3.5-sonnet
+
+  Local models (requires Ollama):
+    ollama/qwen2.5-coder:32b
+    ollama/codellama:latest
+
+Examples:
+  $0                                    # Use default model with subtree-only
+  $0 --model openrouter/deepseek/deepseek-r1
+  $0 --ollama 10.1.200.123             # Use local Ollama instance
+  $0 --full src/main.py                # Work on specific file without restrictions
+  $0 --help                            # Show this help
+
+Environment Variables:
+  AIDER_MODEL           Override default model
+  OLLAMA_HOST           Default Ollama host
+  AIDER_EXTRA_ARGS      Additional arguments to pass to aider
+
+Configuration:
+  This script automatically adds --subtree-only to prevent aider from
+  modifying files outside the current project directory. Use --full to
+  disable this safety feature.
+EOF
+}
+
+# Function to validate model availability
+validate_model() {
+    local model="$1"
+
+    case "$model" in
+        openrouter/*)
+            if [[ -z "${OPENROUTER_API_KEY:-}" ]]; then
+                logger::warn "OPENROUTER_API_KEY not set. OpenRouter models may not work."
+                logger::info "Set your API key: export OPENROUTER_API_KEY=your_key_here"
+            fi
+            ;;
+        ollama/*)
+            if ! command -v ollama >/dev/null 2>&1; then
+                logger::error "Ollama not found in PATH but ollama model specified"
+                logger::info "Install Ollama or use a different model"
+                return 1
+            fi
+            ;;
+    esac
+    return 0
+}
+
+# Parse command line arguments
+model="${AIDER_MODEL:-$DEFAULT_MODEL}"
+use_ollama=""
+files=()
+full_mode=false
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -m|--model)
+            model="$2"
+            shift 2
+            ;;
+        -o|--ollama)
+            use_ollama="$2"
+            model="ollama/qwen2.5-coder:32b"  # Default Ollama model
+            shift 2
+            ;;
+        -f|--full)
+            full_mode=true
+            shift
+            ;;
+        -h|--help)
+            show_usage
+            exit 0
+            ;;
+        -*)
+            logger::error "Unknown option: $1"
+            show_usage
+            exit 1
+            ;;
+        *)
+            files+=("$1")
+            shift
+            ;;
+    esac
+done
+
+# Setup Ollama environment if specified
+if [[ -n "$use_ollama" ]]; then
+    export OLLAMA_HOST="$use_ollama"
+    export OLLAMA_API_BASE="http://${use_ollama}:11434"
+    logger::info "Using Ollama at $OLLAMA_HOST"
+fi
+
+# Validate model
+if ! validate_model "$model"; then
+    exit 1
+fi
+
+# Remove --subtree-only if full mode is requested
+if [[ "$full_mode" == "true" ]]; then
+    AIDER_ARGS=()
+    logger::warn "Full mode enabled - aider can modify any file in the repository"
+else
+    logger::info "Subtree-only mode - aider restricted to current directory and below"
+fi
+
+# Add any extra arguments from environment
+if [[ -n "${AIDER_EXTRA_ARGS:-}" ]]; then
+    # Split AIDER_EXTRA_ARGS on spaces and add to array
+    read -ra extra_args <<< "$AIDER_EXTRA_ARGS"
+    AIDER_ARGS+=("${extra_args[@]}")
+fi
+
+# Build final command
+cmd=(aider --model "$model" "${AIDER_ARGS[@]}")
+
+# Add files if specified
+if [[ ${#files[@]} -gt 0 ]]; then
+    cmd+=("${files[@]}")
+    logger::info "Working with files: ${files[*]}"
+fi
+
+# Log the configuration
+logger::info "Starting aider with model: $model"
+if [[ ${#AIDER_ARGS[@]} -gt 0 ]]; then
+    logger::info "Additional arguments: ${AIDER_ARGS[*]}"
+fi
+
+# Check if aider is available
+if ! command -v aider >/dev/null 2>&1; then
+    logger::error "aider not found in PATH"
+    logger::info "Install with: pip install aider-chat"
+    exit 1
+fi
+
+# Execute aider
+logger::info "Launching aider..."
+exec "${cmd[@]}"
