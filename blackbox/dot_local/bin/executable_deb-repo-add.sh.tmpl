@@ -44,12 +44,35 @@ parse_deb_info() {
     local deb_file="$1"
 
     if [[ ! -f "$deb_file" ]]; then
-        log_error "File not found: $deb_file"
+        log_error "File not found: $deb_file" >&2
         return 1
     fi
 
+    # Check file size
+    local file_size
+    file_size=$(stat -c%s "$deb_file" 2>/dev/null || echo "0")
+    if [[ "$file_size" -lt 1000 ]]; then
+        log_error "File appears to be too small ($file_size bytes) to be a valid .deb package" >&2
+        log_debug "File contents preview:" >&2
+        head -c 200 "$deb_file" | hexdump -C | head -5 | sed 's/^/  /' >&2
+        return 1
+    fi
+
+    # Check file magic bytes
+    local file_magic
+    file_magic=$(file -b "$deb_file" 2>/dev/null || echo "unknown")
+    log_debug "File type detected: $file_magic" >&2
+
     if ! dpkg-deb --info "$deb_file" >/dev/null 2>&1; then
-        log_error "Invalid Debian package: $deb_file"
+        log_error "Invalid Debian package: $deb_file" >&2
+        log_debug "File size: $(du -h "$deb_file" | cut -f1)" >&2
+        log_debug "File type: $file_magic" >&2
+
+        # Try to get more specific error from dpkg-deb
+        local dpkg_error
+        dpkg_error=$(dpkg-deb --info "$deb_file" 2>&1 || true)
+        log_debug "dpkg-deb error: $dpkg_error" >&2
+
         return 1
     fi
 
@@ -159,33 +182,136 @@ add_package() {
     log_info "Successfully added package: $package_name"
 }
 
+# Function to detect if input is a URL
+is_url() {
+    local input="$1"
+    [[ "$input" =~ ^https?:// ]]
+}
+
+# Function to download file from URL
+download_file() {
+    local url="$1"
+    local temp_dir="$2"
+    local filename
+
+    # Extract filename from URL or generate one
+    filename=$(basename "$url")
+    if [[ ! "$filename" =~ \.deb$ ]]; then
+        filename="downloaded_package.deb"
+    fi
+
+    local dest_file="${temp_dir}/${filename}"
+
+    log_info "Downloading from URL: $url" >&2
+
+    # Use wget or curl to download
+    if command -v wget >/dev/null 2>&1; then
+        if wget --show-progress --user-agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" "$url" -O "$dest_file"; then
+            log_info "Downloaded: $filename ($(du -h "$dest_file" | cut -f1))" >&2
+            echo "$dest_file"
+            return 0
+        else
+            log_error "Failed to download with wget: $url" >&2
+            return 1
+        fi
+    elif command -v curl >/dev/null 2>&1; then
+        if curl -L --user-agent "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" -o "$dest_file" "$url" --progress-bar; then
+            log_info "Downloaded: $filename ($(du -h "$dest_file" | cut -f1))" >&2
+            echo "$dest_file"
+            return 0
+        else
+            log_error "Failed to download with curl: $url" >&2
+            return 1
+        fi
+    else
+        log_error "Neither wget nor curl found. Cannot download from URL." >&2
+        return 1
+    fi
+}
+
 # Function to download and add package
 download_and_add() {
     local package_spec="$1"
     local temp_dir
     temp_dir=$(mktemp -d)
 
-    log_info "Downloading package: $package_spec"
+    # Check if the input is a URL
+    if is_url "$package_spec"; then
+        log_info "Detected URL: $package_spec"
 
-    # Download package without installing
-    if apt download "$package_spec" -o Dir::Cache::Archives="$temp_dir"; then
-        # Add all downloaded files
-        local downloaded_files
-        mapfile -t downloaded_files < <(find "$temp_dir" -name "*.deb")
+        # Validate that it's likely a .deb file
+        if [[ ! "$package_spec" =~ \.deb(\?.*)?$ ]]; then
+            log_warn "URL does not appear to point to a .deb file: $package_spec"
+            read -p "Continue anyway? [y/N] " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                log_info "Download cancelled"
+                rm -rf "$temp_dir"
+                return 0
+            fi
+        fi
 
-        if [[ ${#downloaded_files[@]} -eq 0 ]]; then
-            log_error "No .deb files downloaded for: $package_spec"
+        # Download the file
+        local downloaded_file
+        if downloaded_file=$(download_file "$package_spec" "$temp_dir"); then
+            log_debug "Verifying downloaded file: $downloaded_file"
+
+            # Verify it's a valid .deb file
+            if parse_deb_info "$downloaded_file" >/dev/null; then
+                add_package "$downloaded_file"
+            else
+                log_error "Downloaded file is not a valid Debian package"
+                log_info "Troubleshooting information:"
+                log_info "  File: $downloaded_file"
+                log_info "  Size: $(ls -lh "$downloaded_file" | awk '{print $5}')"
+                log_info "  Type: $(file -b "$downloaded_file" 2>/dev/null || echo 'unknown')"
+
+                # Check if it might be an HTML error page
+                if head -c 100 "$downloaded_file" | grep -qi "<!DOCTYPE\|<html"; then
+                    log_error "Downloaded file appears to be an HTML page (possibly an error page)"
+                    log_debug "First few lines of downloaded file:"
+                    head -5 "$downloaded_file" | sed 's/^/  /'
+                fi
+
+                # Keep the file for debugging if requested
+                read -p "Keep downloaded file for debugging? [y/N] " -n 1 -r
+                echo
+                if [[ $REPLY =~ ^[Yy]$ ]]; then
+                    local debug_file="$HOME/debug_$(basename "$downloaded_file")"
+                    cp "$downloaded_file" "$debug_file"
+                    log_info "Debug file saved as: $debug_file"
+                fi
+
+                rm -rf "$temp_dir"
+                return 1
+            fi
+        else
             rm -rf "$temp_dir"
             return 1
         fi
-
-        for file in "${downloaded_files[@]}"; do
-            add_package "$file"
-        done
     else
-        log_error "Failed to download package: $package_spec"
-        rm -rf "$temp_dir"
-        return 1
+        # Traditional apt download
+        log_info "Downloading package from repositories: $package_spec"
+
+        if apt download "$package_spec" -o Dir::Cache::Archives="$temp_dir"; then
+            # Add all downloaded files
+            local downloaded_files
+            mapfile -t downloaded_files < <(find "$temp_dir" -name "*.deb")
+
+            if [[ ${#downloaded_files[@]} -eq 0 ]]; then
+                log_error "No .deb files downloaded for: $package_spec"
+                rm -rf "$temp_dir"
+                return 1
+            fi
+
+            for file in "${downloaded_files[@]}"; do
+                add_package "$file"
+            done
+        else
+            log_error "Failed to download package: $package_spec"
+            rm -rf "$temp_dir"
+            return 1
+        fi
     fi
 
     rm -rf "$temp_dir"
@@ -251,7 +377,7 @@ Usage: $0 [OPTIONS] COMMAND
 
 Commands:
   add FILE         Add a local .deb file to the repository
-  download SPEC    Download and add a package from apt repositories
+  download SPEC    Download and add a package from apt repositories or HTTP/HTTPS URLs
   list            List all packages in the repository
   remove PACKAGE   Remove a package from the repository
   update          Update repository indexes
@@ -263,6 +389,8 @@ Examples:
   $0 add ./my-package_1.0.0_amd64.deb
   $0 download firefox
   $0 download firefox=85.0.1+build1-0ubuntu1
+  $0 download https://releases.hashicorp.com/terraform/1.6.0/terraform_1.6.0_linux_amd64.zip
+  $0 download https://github.com/user/project/releases/download/v1.0.0/package.deb
   $0 list
   $0 remove my-package
   $0 update
