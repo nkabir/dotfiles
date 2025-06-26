@@ -4,7 +4,7 @@
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 {{- if .isUbuntu }}
-set -euo pipefail
+set -eo pipefail
 
 # Load logger library
 HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
