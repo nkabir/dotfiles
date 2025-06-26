@@ -4,42 +4,41 @@
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 {{- if .isUbuntu }}
-set -euo pipefail
+set -eo pipefail
 
 # XDG Base Directory variables
 XDG_DATA_HOME="${XDG_DATA_HOME:-{{ .chezmoi.homeDir }}/.local/share}"
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-{{ .chezmoi.homeDir }}/.config}"
 XDG_CACHE_HOME="${XDG_CACHE_HOME:-{{ .chezmoi.homeDir }}/.cache}"
 
-# Colors
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
+# Load logger library
+HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
+    &> /dev/null && pwd 2> /dev/null; )";
+. "${HERE}/../lib/logger/core.bash"
 
-echo -e "${GREEN}Debian Repository XDG Directory Information${NC}"
+logger::info "Debian Repository XDG Directory Information"
 echo "=================================================="
 echo
 
-echo -e "${BLUE}Configuration:${NC}"
+logger::info "Configuration:"
 echo "  Config dir:     ${XDG_CONFIG_HOME}/deb"
 echo "  Sources list:   ${XDG_CONFIG_HOME}/deb/sources.list.local"
 echo "  FTP config:     ${XDG_CONFIG_HOME}/deb/apt-ftparchive.conf"
 echo
 
-echo -e "${BLUE}Data (Repository Structure):${NC}"
+logger::info "Data (Repository Structure):"
 echo "  Repository:     ${XDG_DATA_HOME}/deb"
 echo "  Pool:           ${XDG_DATA_HOME}/deb/pool/main"
 echo "  Distributions:  ${XDG_DATA_HOME}/deb/dists/local"
 echo "  Packages:       ${XDG_DATA_HOME}/deb/dists/local/main/binary-amd64"
 echo
 
-echo -e "${BLUE}Cache:${NC}"
+logger::info "Cache:"
 echo "  Cache dir:      ${XDG_CACHE_HOME}/deb"
 echo
 
 if [[ -d "${XDG_DATA_HOME}/deb" ]]; then
-    echo -e "${BLUE}Repository Status:${NC}"
+    logger::info "Repository Status:"
 
     # Count packages
     package_count=$(find "${XDG_DATA_HOME}/deb/pool" -name "*.deb" 2>/dev/null | wc -l || echo "0")
@@ -58,21 +57,21 @@ if [[ -d "${XDG_DATA_HOME}/deb" ]]; then
     fi
 
     echo
-    echo -e "${BLUE}APT Sources Entry:${NC}"
+    logger::info "APT Sources Entry:"
     echo "  deb [trusted=yes] file://${XDG_DATA_HOME}/deb local main"
 else
-    echo -e "${YELLOW}Repository not initialized${NC}"
+    logger::warn "Repository not initialized"
     echo "Run 'deb-repo-init.sh' to create the repository"
 fi
 
 echo
-echo -e "${GREEN}Environment Variables:${NC}"
+logger::info "Environment Variables:"
 echo "  XDG_DATA_HOME:   ${XDG_DATA_HOME}"
 echo "  XDG_CONFIG_HOME: ${XDG_CONFIG_HOME}"
 echo "  XDG_CACHE_HOME:  ${XDG_CACHE_HOME}"
 
 echo
-echo -e "${GREEN}Usage:${NC}"
+logger::info "Usage:"
 echo "  deb-repo-init.sh        # Initialize repository"
 echo "  deb-repo-add.sh add FILE    # Add local .deb file"
 echo "  deb-repo-add.sh download PKG # Download and add package"
