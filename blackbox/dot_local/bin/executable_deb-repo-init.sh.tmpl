@@ -6,6 +6,11 @@
 {{- if .isUbuntu }}
 set -euo pipefail
 
+# Load logger library
+HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
+    &> /dev/null && pwd 2> /dev/null; )";
+. "${HERE}/../lib/logger/core.bash"
+
 # Configuration following XDG conventions with APT-accessible location
 DEB_REPO_DIR="/var/cache/apt/local-repo"
 POOL_DIR="${DEB_REPO_DIR}/pool"
@@ -26,24 +31,6 @@ REPO_DESCRIPTION="Local Debian package repository"
 APT_SOURCES_FILE="/etc/apt/sources.list.d/local-deb-repo.list"
 SOURCES_ENTRY="deb [trusted=yes] file://${DEB_REPO_DIR} ${REPO_CODENAME} ${REPO_COMPONENT}"
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
-
-log_info() {
-    echo -e "${GREEN}[INFO]${NC} $1"
-}
-
-log_warn() {
-    echo -e "${YELLOW}[WARN]${NC} $1"
-}
-
-log_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
-
 # Function to check dependencies
 check_dependencies() {
     local missing_deps=()
@@ -56,8 +43,8 @@ check_dependencies() {
     done
 
     if [[ ${#missing_deps[@]} -gt 0 ]]; then
-        log_error "Missing dependencies: ${missing_deps[*]}"
-        log_info "Install with: sudo apt install dpkg-dev apt-utils"
+        logger::error "Missing dependencies: ${missing_deps[*]}"
+        logger::info "Install with: sudo apt install dpkg-dev apt-utils"
         return 1
     fi
 
@@ -66,7 +53,7 @@ check_dependencies() {
 
 # Function to initialize repository structure
 init_repo_structure() {
-    log_info "Initializing local deb repository structure..."
+    logger::info "Initializing local deb repository structure..."
 
     # Create repository directory with proper ownership
     sudo mkdir -p "${DEB_REPO_DIR}"
@@ -82,16 +69,16 @@ init_repo_structure() {
     mkdir -p "$(dirname "$USER_REPO_LINK")"
     if [[ ! -L "$USER_REPO_LINK" ]]; then
         ln -sf "$DEB_REPO_DIR" "$USER_REPO_LINK"
-        log_info "Created convenience symlink: $USER_REPO_LINK -> $DEB_REPO_DIR"
+        logger::info "Created convenience symlink: $USER_REPO_LINK -> $DEB_REPO_DIR"
     fi
 
-    log_info "Created repository directories:"
-    log_info "  Repository root: ${DEB_REPO_DIR}"
-    log_info "  Pool: ${POOL_DIR}"
-    log_info "  Distributions: ${DISTS_DIR}"
-    log_info "  Cache: ${CACHE_DIR}"
-    log_info "  Config: ${CONFIG_DIR}"
-    log_info "  User symlink: ${USER_REPO_LINK}"
+    logger::info "Created repository directories:"
+    logger::info "  Repository root: ${DEB_REPO_DIR}"
+    logger::info "  Pool: ${POOL_DIR}"
+    logger::info "  Distributions: ${DISTS_DIR}"
+    logger::info "  Cache: ${CACHE_DIR}"
+    logger::info "  Config: ${CONFIG_DIR}"
+    logger::info "  User symlink: ${USER_REPO_LINK}"
 }
 
 # Function to create repository configuration
@@ -108,7 +95,7 @@ Components: ${REPO_COMPONENT}
 Description: ${REPO_DESCRIPTION}
 EOF
 
-    log_info "Created Release file at ${conf_file}"
+    logger::info "Created Release file at ${conf_file}"
 }
 
 # Function to create apt-ftparchive configuration
@@ -143,7 +130,7 @@ Contents {
 };
 EOF
 
-    log_info "Created apt-ftparchive config at ${ftparchive_conf}"
+    logger::info "Created apt-ftparchive config at ${ftparchive_conf}"
 }
 
 # Function to create sources.list entry template
@@ -156,17 +143,17 @@ create_sources_list_template() {
 ${SOURCES_ENTRY}
 EOF
 
-    log_info "Created sources.list template at ${sources_template}"
+    logger::info "Created sources.list template at ${sources_template}"
 }
 
 # Function to add repository to APT sources
 add_to_apt_sources() {
-    log_info "Adding repository to APT sources..."
+    logger::info "Adding repository to APT sources..."
 
     # Check if entry already exists
     if [[ -f "$APT_SOURCES_FILE" ]]; then
         if grep -qF "${SOURCES_ENTRY}" "$APT_SOURCES_FILE" 2>/dev/null; then
-            log_info "Repository entry already exists in $APT_SOURCES_FILE"
+            logger::info "Repository entry already exists in $APT_SOURCES_FILE"
             return 0
         fi
     fi
@@ -179,43 +166,43 @@ add_to_apt_sources() {
 ${SOURCES_ENTRY}
 EOF
     then
-        log_info "Added repository to $APT_SOURCES_FILE"
-        log_info "Entry: ${SOURCES_ENTRY}"
+        logger::info "Added repository to $APT_SOURCES_FILE"
+        logger::info "Entry: ${SOURCES_ENTRY}"
 
         # Update APT cache to include the new repository
-        log_info "Updating APT package cache..."
+        logger::info "Updating APT package cache..."
         if sudo apt update; then
-            log_info "APT cache updated successfully"
+            logger::info "APT cache updated successfully"
         else
-            log_warn "APT update completed with some warnings"
+            logger::warn "APT update completed with some warnings"
         fi
     else
-        log_error "Failed to create $APT_SOURCES_FILE"
-        log_warn "You may need to add the repository manually:"
-        log_warn "  sudo tee $APT_SOURCES_FILE << EOF"
-        log_warn "  ${SOURCES_ENTRY}"
-        log_warn "  EOF"
+        logger::error "Failed to create $APT_SOURCES_FILE"
+        logger::warn "You may need to add the repository manually:"
+        logger::warn "  sudo tee $APT_SOURCES_FILE << EOF"
+        logger::warn "  ${SOURCES_ENTRY}"
+        logger::warn "  EOF"
         return 1
     fi
 }
 
 # Function to remove repository from APT sources
 remove_from_apt_sources() {
-    log_info "Removing repository from APT sources..."
+    logger::info "Removing repository from APT sources..."
 
     if [[ -f "$APT_SOURCES_FILE" ]]; then
         if sudo rm -f "$APT_SOURCES_FILE"; then
-            log_info "Removed $APT_SOURCES_FILE"
+            logger::info "Removed $APT_SOURCES_FILE"
 
             # Update APT cache
-            log_info "Updating APT package cache..."
+            logger::info "Updating APT package cache..."
             sudo apt update >/dev/null 2>&1 || true
         else
-            log_error "Failed to remove $APT_SOURCES_FILE"
+            logger::error "Failed to remove $APT_SOURCES_FILE"
             return 1
         fi
     else
-        log_info "APT sources file does not exist: $APT_SOURCES_FILE"
+        logger::info "APT sources file does not exist: $APT_SOURCES_FILE"
     fi
 }
 
@@ -241,14 +228,14 @@ dists/*/InRelease
 .cache/
 EOF
 
-    log_info "Created .gitignore at ${gitignore_file}"
+    logger::info "Created .gitignore at ${gitignore_file}"
 }
 
 # Function to create keep files
 create_keep_files() {
     sudo touch "${POOL_DIR}/${REPO_COMPONENT}/.keep"
     sudo touch "${DISTS_DIR}/${REPO_CODENAME}/${REPO_COMPONENT}/binary-${REPO_ARCHITECTURE}/.keep"
-    log_info "Created .keep files for empty directories"
+    logger::info "Created .keep files for empty directories"
 }
 
 # Function to set permissions
@@ -262,12 +249,12 @@ set_permissions() {
     sudo chmod 755 "${DEB_REPO_DIR}"
     sudo chmod -R a+r "${DEB_REPO_DIR}"
 
-    log_info "Set appropriate permissions for repository (APT-accessible)"
+    logger::info "Set appropriate permissions for repository (APT-accessible)"
 }
 
 # Function to update package indexes
 update_indexes() {
-    log_info "Updating package indexes..."
+    logger::info "Updating package indexes..."
 
     # Generate Packages file
     cd "${DEB_REPO_DIR}"
@@ -311,7 +298,7 @@ update_indexes() {
     # Set proper permissions on the Release file
     sudo chmod 644 "${release_file}"
 
-    log_info "Package indexes updated successfully"
+    logger::info "Package indexes updated successfully"
 }
 
 # Function to validate repository structure
@@ -327,45 +314,45 @@ validate_repo() {
 
     for dir in "${required_dirs[@]}"; do
         if [[ ! -d "$dir" ]]; then
-            log_error "Missing directory: $dir"
+            logger::error "Missing directory: $dir"
             ((errors++))
         fi
     done
 
     # Check Release file
     if [[ ! -f "${DISTS_DIR}/${REPO_CODENAME}/Release" ]]; then
-        log_error "Missing Release file: ${DISTS_DIR}/${REPO_CODENAME}/Release"
+        logger::error "Missing Release file: ${DISTS_DIR}/${REPO_CODENAME}/Release"
         ((errors++))
     fi
 
     # Check if repository is added to APT sources
     if [[ -f "$APT_SOURCES_FILE" ]]; then
         if grep -qF "${SOURCES_ENTRY}" "$APT_SOURCES_FILE" 2>/dev/null; then
-            log_info "Repository is properly configured in APT sources"
+            logger::info "Repository is properly configured in APT sources"
         else
-            log_warn "Repository file exists but entry not found: $APT_SOURCES_FILE"
-            log_warn "Expected entry: ${SOURCES_ENTRY}"
-            log_warn "Actual file contents:"
+            logger::warn "Repository file exists but entry not found: $APT_SOURCES_FILE"
+            logger::warn "Expected entry: ${SOURCES_ENTRY}"
+            logger::warn "Actual file contents:"
             cat "$APT_SOURCES_FILE" | sed 's/^/    /'
             ((errors++))
         fi
     else
-        log_warn "Repository not added to APT sources: $APT_SOURCES_FILE"
+        logger::warn "Repository not added to APT sources: $APT_SOURCES_FILE"
         ((errors++))
     fi
 
     if [[ $errors -eq 0 ]]; then
-        log_info "Repository validation passed"
+        logger::info "Repository validation passed"
         return 0
     else
-        log_error "Repository validation failed with $errors errors"
+        logger::error "Repository validation failed with $errors errors"
         return 1
     fi
 }
 
 # Function to show repository status
 show_status() {
-    log_info "Local deb repository status:"
+    logger::info "Local deb repository status:"
     echo "  Repository root: ${DEB_REPO_DIR}"
     echo "  Pool directory: ${POOL_DIR}"
     echo "  Distributions: ${DISTS_DIR}"
@@ -437,14 +424,14 @@ main() {
         "init")
             # Clean up old repository location if it exists
             if [[ -d "{{ .chezmoi.homeDir }}/.local/share/deb" && ! -L "{{ .chezmoi.homeDir }}/.local/share/deb" ]]; then
-                log_warn "Found old repository in home directory. Moving to new location..."
+                logger::warn "Found old repository in home directory. Moving to new location..."
                 if [[ -d "{{ .chezmoi.homeDir }}/.local/share/deb/pool" ]]; then
                     # Backup existing packages if any
                     sudo mkdir -p "${DEB_REPO_DIR}/pool"
                     sudo cp -r "{{ .chezmoi.homeDir }}/.local/share/deb/pool/"* "${DEB_REPO_DIR}/pool/" 2>/dev/null || true
                 fi
                 rm -rf "{{ .chezmoi.homeDir }}/.local/share/deb"
-                log_info "Moved old repository data to new location"
+                logger::info "Moved old repository data to new location"
             fi
 
             check_dependencies || exit 1
@@ -460,10 +447,10 @@ main() {
             validate_repo
             show_status
             echo
-            log_info "Repository initialization complete!"
-            log_info "Repository location: ${DEB_REPO_DIR}"
-            log_info "User convenience link: ${USER_REPO_LINK}"
-            log_info "You can now add packages and install them using apt."
+            logger::info "Repository initialization complete!"
+            logger::info "Repository location: ${DEB_REPO_DIR}"
+            logger::info "User convenience link: ${USER_REPO_LINK}"
+            logger::info "You can now add packages and install them using apt."
             ;;
         "update")
             update_indexes
@@ -484,7 +471,7 @@ main() {
             show_help
             ;;
         *)
-            log_error "Unknown command: $1"
+            logger::error "Unknown command: $1"
             show_help
             exit 1
             ;;
