@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
-# CWIQ Seed Go
+# CWIQ Seed Installer Script
 #
 # This script is part of the CWIQ Seed project.
 #
