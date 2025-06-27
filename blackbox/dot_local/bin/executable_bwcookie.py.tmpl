@@ -218,7 +218,16 @@ class BWCookie:
             return None
 
         try:
-            # Search for item
+            # Get the full item
+            result = subprocess.run([
+                "bw", "get", "item", key,
+                "--session", self.session_key
+            ], capture_output=True, text=True)
+
+            if result.returncode == 0:
+                return result.stdout.strip()
+
+            # If direct get fails, try searching
             result = subprocess.run([
                 "bw", "list", "items", "--search", key,
                 "--session", self.session_key
@@ -231,20 +240,7 @@ class BWCookie:
             # Find exact match
             for item in items:
                 if item.get("name") == key:
-                    # Get the value based on item type
-                    if item.get("login") and item["login"].get("password"):
-                        return item["login"]["password"]
-                    elif item.get("card"):
-                        # Return card number by default for card types
-                        card = item["card"]
-                        return card.get("number", "")
-                    elif item.get("notes"):
-                        return item["notes"]
-                    elif item.get("fields"):
-                        # Return first field value
-                        for field in item["fields"]:
-                            if field.get("value"):
-                                return field["value"]
+                    return json.dumps(item, indent=2)
 
             return None
 
@@ -273,54 +269,51 @@ class BWCookie:
 
     def get_field(self, key: str, field: str) -> Optional[str]:
         """Get specific field from Bitwarden item."""
-        if not self.session_key:
-            logger.error("Not logged in to Bitwarden")
+        # Check cache first
+        cache_key = f"{key}:{field}"
+        value = self.get_from_skate(cache_key)
+        if value:
+            logger.debug(f"Found {cache_key} in cache")
+            return value
+
+        # Get full item
+        item_json = self.get(key)
+        if not item_json:
             return None
 
         try:
-            # Check cache first
-            cache_key = f"{key}:{field}"
-            value = self.get_from_skate(cache_key)
+            item = json.loads(item_json)
+
+            # Extract specific field based on item type
+            if item.get("card") and field in ["number", "expMonth", "expYear", "code", "cardholderName"]:
+                value = item["card"].get(field)
+            elif item.get("login") and field == "password":
+                value = item["login"].get("password")
+            elif item.get("login") and field == "username":
+                value = item["login"].get("username")
+            elif item.get("login") and field == "totp":
+                value = item["login"].get("totp")
+            elif field == "notes":
+                value = item.get("notes")
+            elif item.get("fields"):
+                for f in item["fields"]:
+                    if f.get("name") == field:
+                        value = f.get("value")
+                        break
+                else:
+                    value = None
+            else:
+                # Try to get any top-level field
+                value = item.get(field)
+
             if value:
-                logger.debug(f"Found {cache_key} in cache")
-                return value
-
-            # Get from Bitwarden
-            result = subprocess.run([
-                "bw", "list", "items", "--search", key,
-                "--session", self.session_key
-            ], capture_output=True, text=True, check=True)
-
-            items = json.loads(result.stdout)
-            if not items:
-                return None
-
-            # Find exact match
-            for item in items:
-                if item.get("name") == key:
-                    # Get specific field based on item type
-                    if item.get("card") and field in ["number", "expMonth", "expYear", "code", "cardholderName"]:
-                        value = item["card"].get(field)
-                        if value:
-                            self.set_in_skate(cache_key, value)
-                            return value
-                    elif item.get("login") and field == "password":
-                        value = item["login"].get("password")
-                        if value:
-                            self.set_in_skate(cache_key, value)
-                            return value
-                    elif item.get("fields"):
-                        for f in item["fields"]:
-                            if f.get("name") == field:
-                                value = f.get("value")
-                                if value:
-                                    self.set_in_skate(cache_key, value)
-                                    return value
+                self.set_in_skate(cache_key, str(value))
+                return str(value)
 
             return None
 
-        except Exception as e:
-            logger.error(f"Failed to get field from Bitwarden: {e}")
+        except json.JSONDecodeError:
+            logger.error("Failed to parse item JSON")
             return None
 
 # Global instance
@@ -338,7 +331,7 @@ def login():
 
 @app.command()
 def get(key: str, field: Optional[str] = None):
-    """Get a secret value. For cards, optionally specify field: number, expMonth, expYear, code, cardholderName."""
+    """Get a secret (returns full JSON). For specific fields: number, expMonth, expYear, code, cardholderName, password, username, notes."""
     if not bw.session_key:
         bw.session_key = os.environ.get("BW_SESSION")
         if not bw.session_key:
@@ -367,6 +360,40 @@ def get(key: str, field: Optional[str] = None):
             logger.error(f"Field '{field}' not found for key '{key}'")
         else:
             logger.error(f"Key '{key}' not found")
+        raise typer.Exit(1)
+
+@app.command()
+def value(key: str):
+    """Get just the primary value (password for logins, card number for cards, notes for secure notes)."""
+    if not bw.session_key:
+        bw.session_key = os.environ.get("BW_SESSION")
+        if not bw.session_key:
+            logger.error("Not logged in. Run 'bwcookie login' first.")
+            raise typer.Exit(1)
+
+    # Get full JSON
+    json_str = bw.get(key)
+    if not json_str:
+        logger.error(f"Key '{key}' not found")
+        raise typer.Exit(1)
+
+    try:
+        item = json.loads(json_str)
+        # Extract primary value based on type
+        if item.get("login") and item["login"].get("password"):
+            print(item["login"]["password"])
+        elif item.get("card") and item["card"].get("number"):
+            print(item["card"]["number"])
+        elif item.get("notes"):
+            print(item["notes"])
+        elif item.get("fields") and len(item["fields"]) > 0:
+            # First field value
+            print(item["fields"][0].get("value", ""))
+        else:
+            logger.error("No primary value found")
+            raise typer.Exit(1)
+    except json.JSONDecodeError:
+        logger.error("Failed to parse item data")
         raise typer.Exit(1)
 
 @app.command()
