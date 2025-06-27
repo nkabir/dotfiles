@@ -1,5 +1,4 @@
-# Save as: private_dot_local/bin/executable_bwcookie.tmpl
-#!/usr/bin/env -S uv run
+#!/usr/bin/env uv run
 # /// script
 # requires-python = ">=3.11"
 # dependencies = [
@@ -163,9 +162,12 @@ class BWCookie:
                 "ssh-keygen", "-y", "-f", str(self.ssh_key_path)
             ], stdout=ssh_pub_path.open('w'), check=True)
 
+        # Read the public key content
+        ssh_pub_key = ssh_pub_path.read_text().strip()
+
         # Encrypt using SSH public key as recipient
         result = subprocess.run([
-            "age", "-r", f"ssh-ed25519@{ssh_pub_path}", "-a"
+            "age", "-r", ssh_pub_key, "-a"
         ], input=value.encode(), capture_output=True, check=True)
 
         return result.stdout.decode('utf-8').strip()
