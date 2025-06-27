@@ -1,3 +1,4 @@
+# Save as: private_dot_local/bin/executable_bwcookie.tmpl
 #!/bin/sh
 '''exec' uv run "$0" "$@"
 '''
@@ -428,25 +429,50 @@ def clear_cache(key: Optional[str] = None):
 def status():
     """Check status of components."""
     # Check Bitwarden
-    try:
-        result = subprocess.run(["bw", "status"], capture_output=True, text=True)
-        status = json.loads(result.stdout)
-        logger.info(f"Bitwarden: {status.get('status', 'unknown')}")
-    except:
-        logger.error("Bitwarden: not available")
+    with console.status("[bold green]Checking Bitwarden...", spinner="dots"):
+        try:
+            result = subprocess.run(["bw", "status"], capture_output=True, text=True)
+            status = json.loads(result.stdout)
+            bw_status = status.get('status', 'unknown')
+            console.print(f"✓ Bitwarden: [green]{bw_status}[/green]")
+        except:
+            console.print("✗ Bitwarden: [red]not available[/red]")
 
     # Check SSH key
-    if bw.ssh_key_path.exists():
-        logger.info(f"SSH key: {bw.ssh_key_path}")
-    else:
-        logger.warning("SSH key: not found")
+    with console.status("[bold green]Checking SSH key...", spinner="dots"):
+        if bw.ssh_key_path.exists():
+            console.print(f"✓ SSH key: [green]{bw.ssh_key_path}[/green]")
+            # Check public key
+            pub_key_path = bw.ssh_key_path.with_suffix(".pub")
+            if pub_key_path.exists():
+                console.print(f"✓ SSH public key: [green]{pub_key_path}[/green]")
+            else:
+                console.print("✗ SSH public key: [yellow]not found[/yellow]")
+        else:
+            console.print("✗ SSH key: [red]not found[/red]")
 
     # Check skate
-    try:
-        subprocess.run(["skate", "list"], capture_output=True, check=True)
-        logger.info("Skate: available")
-    except:
-        logger.error("Skate: not available")
+    with console.status("[bold green]Checking Skate...", spinner="dots"):
+        try:
+            result = subprocess.run(["skate", "list"], capture_output=True, check=True)
+            # Count bwcookie entries
+            entries = 0
+            if result.stdout:
+                for line in result.stdout.decode().strip().split('\n'):
+                    if line and line.strip().startswith("bwcookie:"):
+                        entries += 1
+            console.print(f"✓ Skate: [green]available[/green] ({entries} cached entries)")
+        except:
+            console.print("✗ Skate: [red]not available[/red]")
+
+    # Check age
+    with console.status("[bold green]Checking age...", spinner="dots"):
+        try:
+            result = subprocess.run(["age", "--version"], capture_output=True, check=True)
+            version = result.stdout.decode().strip()
+            console.print(f"✓ Age: [green]{version}[/green]")
+        except:
+            console.print("✗ Age: [red]not available[/red]")
 
 if __name__ == "__main__":
     app()
