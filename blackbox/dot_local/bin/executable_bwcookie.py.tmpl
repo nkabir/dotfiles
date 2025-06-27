@@ -1,3 +1,4 @@
+# Save as: private_dot_local/bin/executable_bwcookie.tmpl
 #!/bin/sh
 '''exec' uv run "$0" "$@"
 '''
@@ -202,9 +203,10 @@ class BWCookie:
         """Encrypt value and store in skate."""
         try:
             encrypted = self.encrypt_value(value)
+            # Use stdin to avoid issues with special characters
             subprocess.run([
-                "skate", "set", f"bwcookie:{key}", encrypted
-            ], check=True)
+                "skate", "set", f"bwcookie:{key}"
+            ], input=encrypted.encode(), check=True)
             logger.debug(f"Cached {key} in skate")
         except Exception as e:
             logger.warning(f"Failed to cache in skate: {e}")
