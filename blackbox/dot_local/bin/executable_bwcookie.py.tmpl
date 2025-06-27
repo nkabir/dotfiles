@@ -5,6 +5,7 @@
 # dependencies = [
 #     "typer>=0.12.0",
 #     "loguru>=0.7.2",
+#     "rich>=13.7.0",
 # ]
 # ///
 
@@ -27,8 +28,11 @@ from typing import Optional, Dict, Any
 
 import typer
 from loguru import logger
+from rich.console import Console
+from rich.spinner import Spinner
 
 app = typer.Typer(help="Manage secrets with Bitwarden and local encrypted cache")
+console = Console()
 
 # Configure logging
 logger.remove()
@@ -335,11 +339,20 @@ def get(key: str, field: Optional[str] = None):
             logger.error("Not logged in. Run 'bwcookie login' first.")
             raise typer.Exit(1)
 
-    # Handle field-specific requests
-    if field:
-        value = bw.get_field(key, field)
+    # Use spinner only if stdout is a TTY (interactive)
+    if sys.stdout.isatty():
+        with console.status(f"[bold green]Retrieving {key}...", spinner="dots"):
+            # Handle field-specific requests
+            if field:
+                value = bw.get_field(key, field)
+            else:
+                value = bw.get(key)
     else:
-        value = bw.get(key)
+        # Non-interactive mode, no spinner
+        if field:
+            value = bw.get_field(key, field)
+        else:
+            value = bw.get(key)
 
     if value:
         print(value)
