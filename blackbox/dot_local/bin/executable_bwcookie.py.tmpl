@@ -474,5 +474,58 @@ def status():
         except:
             console.print("✗ Age: [red]not available[/red]")
 
+@app.command()
+def list(
+    search: Optional[str] = typer.Option(None, "--search", "-s", help="Search query"),
+    folder: Optional[str] = typer.Option(None, "--folder", "-f", help="Filter by folder ID"),
+    names_only: bool = typer.Option(False, "--names-only", "-n", help="Return only item names")
+):
+    """List all items in Bitwarden as JSON."""
+    if not bw.session_key:
+        bw.session_key = os.environ.get("BW_SESSION")
+        if not bw.session_key:
+            logger.error("Not logged in. Run 'bwcookie login' first.")
+            raise typer.Exit(1)
+
+    # Build command
+    cmd = ["bw", "list", "items", "--session", bw.session_key]
+
+    if search:
+        cmd.extend(["--search", search])
+
+    if folder:
+        cmd.extend(["--folderid", folder])
+
+    # Use spinner only if stdout is a TTY (interactive)
+    if sys.stdout.isatty():
+        with console.status(f"[bold green]Retrieving items from Bitwarden...", spinner="dots"):
+            result = subprocess.run(cmd, capture_output=True, text=True)
+    else:
+        result = subprocess.run(cmd, capture_output=True, text=True)
+
+    if result.returncode != 0:
+        logger.error(f"Failed to list items: {result.stderr}")
+        raise typer.Exit(1)
+
+    try:
+        items = json.loads(result.stdout)
+
+        if names_only:
+            # Extract just the names
+            names = [{"name": item.get("name"), "id": item.get("id"), "type": item.get("type")}
+                    for item in items]
+            print(json.dumps(names, indent=2))
+        else:
+            # Return full items
+            print(json.dumps(items, indent=2))
+
+        # Show count in stderr if interactive
+        if sys.stderr.isatty():
+            logger.info(f"Found {len(items)} items")
+
+    except json.JSONDecodeError:
+        logger.error("Failed to parse Bitwarden response")
+        raise typer.Exit(1)
+
 if __name__ == "__main__":
     app()
