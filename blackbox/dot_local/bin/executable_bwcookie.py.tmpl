@@ -1,0 +1,328 @@
+#!/usr/bin/env -S uv run
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#     "typer>=0.12.0",
+#     "loguru>=0.7.2",
+# ]
+# ///
+
+"""
+bwcookie - A developer tool for managing secrets with Bitwarden, Skate, and age encryption.
+
+This tool combines:
+- Bitwarden CLI for secret storage
+- Charmbracelet Skate for local caching
+- age encryption for secure local storage
+- SSH agent integration for key management
+"""
+
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+from typing import Optional, Dict, Any
+
+import typer
+from loguru import logger
+
+app = typer.Typer(help="Manage secrets with Bitwarden and local encrypted cache")
+
+# Configure logging
+logger.remove()
+logger.add(sys.stderr, level="INFO", format="<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>")
+
+class BWCookie:
+    def __init__(self):
+        self.session_key: Optional[str] = None
+        self.ssh_key_path = Path.home() / ".ssh" / "id_ed25519"
+        self.ensure_ssh_key()
+    
+    def ensure_ssh_key(self):
+        """Ensure SSH key exists or create one."""
+        if not self.ssh_key_path.exists():
+            logger.info("Creating SSH key at ~/.ssh/id_ed25519")
+            self.ssh_key_path.parent.mkdir(mode=0o700, exist_ok=True)
+            subprocess.run([
+                "ssh-keygen", "-t", "ed25519", "-f", str(self.ssh_key_path),
+                "-N", "", "-C", "bwcookie@local"
+            ], check=True)
+            self.ssh_key_path.chmod(0o600)
+            (self.ssh_key_path.with_suffix(".pub")).chmod(0o644)
+    
+    def ensure_age_key(self):
+        """Ensure age key exists or create one."""
+        self.age_key_path.parent.mkdir(mode=0o700, exist_ok=True)
+        
+        if not self.age_key_path.exists():
+            logger.info("Generating age key")
+            subprocess.run([
+                "age-keygen", "-o", str(self.age_key_path)
+            ], check=True)
+            self.age_key_path.chmod(0o600)
+    
+    def get_age_recipient(self) -> str:
+        """Get the age recipient (public key) from the age key."""
+        age_key_content = self.age_key_path.read_text().strip()
+        for line in age_key_content.split('\n'):
+            if line.startswith("# public key:"):
+                return line.split(":", 1)[1].strip()
+        
+        # Fallback: derive public key
+        logger.warning("Could not find public key in age key file, deriving it")
+        result = subprocess.run([
+            "age-keygen", "-y"
+        ], input=age_key_content, capture_output=True, text=True, check=True)
+        return result.stdout.strip()
+    
+    def login(self) -> bool:
+        """Login to Bitwarden and store session key in memory."""
+        try:
+            # Check if already logged in
+            result = subprocess.run(["bw", "status"], capture_output=True, text=True)
+            status = json.loads(result.stdout)
+            
+            if status.get("status") == "unlocked":
+                logger.info("Already logged in to Bitwarden")
+                # Get session key from environment or prompt
+                self.session_key = os.environ.get("BW_SESSION")
+                if not self.session_key:
+                    logger.error("BW_SESSION not found in environment")
+                    return False
+                return True
+            
+            # Login process
+            logger.info("Logging in to Bitwarden...")
+            email = typer.prompt("Bitwarden email")
+            
+            # First login if needed
+            if status.get("status") == "unauthenticated":
+                subprocess.run(["bw", "login", email], check=True)
+            
+            # Unlock vault
+            password = typer.prompt("Bitwarden password", hide_input=True)
+            result = subprocess.run(
+                ["bw", "unlock", "--raw"],
+                input=password,
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            
+            self.session_key = result.stdout.strip()
+            logger.success("Successfully logged in to Bitwarden")
+            
+            # Try to download main SSH key
+            self.download_main_ssh_key()
+            
+            return True
+            
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Failed to login to Bitwarden: {e}")
+            return False
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse Bitwarden response: {e}")
+            return False
+    
+    def download_main_ssh_key(self):
+        """Download main SSH key from Bitwarden if available."""
+        try:
+            result = subprocess.run([
+                "bw", "get", "item", "ssh.key.ed25519.main",
+                "--session", self.session_key
+            ], capture_output=True, text=True)
+            
+            if result.returncode == 0:
+                item = json.loads(result.stdout)
+                if "notes" in item and item["notes"]:
+                    logger.info("Found main SSH key in Bitwarden, updating local key")
+                    backup_path = self.ssh_key_path.with_suffix(".backup")
+                    if self.ssh_key_path.exists():
+                        self.ssh_key_path.rename(backup_path)
+                    
+                    self.ssh_key_path.write_text(item["notes"])
+                    self.ssh_key_path.chmod(0o600)
+                    
+                    logger.success("Updated SSH key from Bitwarden")
+        except Exception as e:
+            logger.debug(f"Could not download main SSH key: {e}")
+    
+    def encrypt_value(self, value: str) -> str:
+        """Encrypt a value using age with SSH key."""
+        # Get SSH public key
+        ssh_pub_path = self.ssh_key_path.with_suffix(".pub")
+        if not ssh_pub_path.exists():
+            # Generate public key from private
+            subprocess.run([
+                "ssh-keygen", "-y", "-f", str(self.ssh_key_path)
+            ], stdout=ssh_pub_path.open('w'), check=True)
+        
+        # Encrypt using SSH public key as recipient
+        result = subprocess.run([
+            "age", "-r", f"ssh-ed25519@{ssh_pub_path}", "-a"
+        ], input=value.encode(), capture_output=True, check=True)
+        
+        return result.stdout.decode('utf-8').strip()
+    
+    def decrypt_value(self, encrypted: str) -> str:
+        """Decrypt a value using age with SSH key."""
+        result = subprocess.run([
+            "age", "-d", "-i", str(self.ssh_key_path)
+        ], input=encrypted.encode(), capture_output=True, check=True)
+        
+        return result.stdout.decode('utf-8')
+    
+    def get_from_skate(self, key: str) -> Optional[str]:
+        """Get encrypted value from skate and decrypt it."""
+        try:
+            result = subprocess.run([
+                "skate", "get", f"bwcookie:{key}"
+            ], capture_output=True, text=True)
+            
+            if result.returncode == 0 and result.stdout.strip():
+                encrypted = result.stdout.strip()
+                return self.decrypt_value(encrypted)
+            
+            return None
+        except Exception as e:
+            logger.debug(f"Failed to get from skate: {e}")
+            return None
+    
+    def set_in_skate(self, key: str, value: str):
+        """Encrypt value and store in skate."""
+        try:
+            encrypted = self.encrypt_value(value)
+            subprocess.run([
+                "skate", "set", f"bwcookie:{key}", encrypted
+            ], check=True)
+            logger.debug(f"Cached {key} in skate")
+        except Exception as e:
+            logger.warning(f"Failed to cache in skate: {e}")
+    
+    def get_from_bitwarden(self, key: str) -> Optional[str]:
+        """Get value from Bitwarden."""
+        if not self.session_key:
+            logger.error("Not logged in to Bitwarden")
+            return None
+        
+        try:
+            # Search for item
+            result = subprocess.run([
+                "bw", "list", "items", "--search", key,
+                "--session", self.session_key
+            ], capture_output=True, text=True, check=True)
+            
+            items = json.loads(result.stdout)
+            if not items:
+                return None
+            
+            # Find exact match
+            for item in items:
+                if item.get("name") == key:
+                    # Get the value based on item type
+                    if item.get("login") and item["login"].get("password"):
+                        return item["login"]["password"]
+                    elif item.get("notes"):
+                        return item["notes"]
+                    elif item.get("fields"):
+                        # Return first field value
+                        for field in item["fields"]:
+                            if field.get("value"):
+                                return field["value"]
+            
+            return None
+            
+        except Exception as e:
+            logger.error(f"Failed to get from Bitwarden: {e}")
+            return None
+    
+    def get(self, key: str) -> Optional[str]:
+        """Get value from cache or Bitwarden."""
+        # First check skate cache
+        value = self.get_from_skate(key)
+        if value:
+            logger.debug(f"Found {key} in cache")
+            return value
+        
+        # If not in cache, check Bitwarden
+        logger.debug(f"Checking Bitwarden for {key}")
+        value = self.get_from_bitwarden(key)
+        
+        if value:
+            # Cache for next time
+            self.set_in_skate(key, value)
+            return value
+        
+        return None
+
+# Global instance
+bw = BWCookie()
+
+@app.command()
+def login():
+    """Login to Bitwarden."""
+    if bw.login():
+        logger.success("Login successful")
+        logger.info(f"Export BW_SESSION={bw.session_key}")
+    else:
+        logger.error("Login failed")
+        raise typer.Exit(1)
+
+@app.command()
+def get(key: str):
+    """Get a secret value."""
+    if not bw.session_key:
+        bw.session_key = os.environ.get("BW_SESSION")
+        if not bw.session_key:
+            logger.error("Not logged in. Run 'bwcookie login' first.")
+            raise typer.Exit(1)
+    
+    value = bw.get(key)
+    if value:
+        print(value)
+    else:
+        logger.error(f"Key '{key}' not found")
+        raise typer.Exit(1)
+
+@app.command()
+def clear_cache(key: Optional[str] = None):
+    """Clear cached values."""
+    if key:
+        subprocess.run(["skate", "delete", f"bwcookie:{key}"], check=True)
+        logger.success(f"Cleared cache for {key}")
+    else:
+        # Clear all bwcookie entries
+        result = subprocess.run(["skate", "list"], capture_output=True, text=True)
+        if result.returncode == 0:
+            for line in result.stdout.strip().split('\n'):
+                if line.startswith("bwcookie:"):
+                    subprocess.run(["skate", "delete", line], check=True)
+            logger.success("Cleared all cached values")
+
+@app.command()
+def status():
+    """Check status of components."""
+    # Check Bitwarden
+    try:
+        result = subprocess.run(["bw", "status"], capture_output=True, text=True)
+        status = json.loads(result.stdout)
+        logger.info(f"Bitwarden: {status.get('status', 'unknown')}")
+    except:
+        logger.error("Bitwarden: not available")
+    
+    # Check SSH key
+    if bw.ssh_key_path.exists():
+        logger.info(f"SSH key: {bw.ssh_key_path}")
+    else:
+        logger.warning("SSH key: not found")
+    
+    # Check skate
+    try:
+        subprocess.run(["skate", "list"], capture_output=True, check=True)
+        logger.info("Skate: available")
+    except:
+        logger.error("Skate: not available")
+
+if __name__ == "__main__":
+    app()

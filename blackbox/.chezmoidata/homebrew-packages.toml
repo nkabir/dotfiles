@@ -13,7 +13,7 @@
 
 [homebrew]
 common = [
-"age"
+"age",
 "argc",
 "bat",
 "bitwarden-cli",
@@ -39,7 +39,7 @@ common = [
 "tree",
 "uv",
 "vim",
-"yq",
+"yq"
 ]
 
 ubuntu = [
