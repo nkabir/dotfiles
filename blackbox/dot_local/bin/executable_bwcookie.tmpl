@@ -346,6 +346,60 @@ class BWCookie:
                 else:
                     logger.error("Failed to get session after login")
                     return False
+            elif current_status == "unauthenticated":
+                # Not logged in at all, need full login
+                logger.info("Not authenticated, performing full login...")
+                email = typer.prompt("Bitwarden email")
+
+                # First login (this handles 2FA) - capture output to extract session
+                logger.info("Logging in to Bitwarden (this will include 2FA)...")
+
+                # Run login and capture output
+                login_result = subprocess.run(
+                    ["bw", "login", email],
+                    capture_output=True,
+                    text=True
+                )
+
+                if login_result.returncode != 0:
+                    logger.error("Login failed")
+                    if login_result.stderr:
+                        logger.error(f"Error: {login_result.stderr}")
+                    return False
+
+                # Extract session key from the login output
+                # Look for the BW_SESSION value in the output
+                output_lines = login_result.stdout.strip().split('\n')
+                session_key = None
+
+                for line in output_lines:
+                    # Look for the export BW_SESSION line
+                    if line.startswith('$ export BW_SESSION="') or line.startswith('export BW_SESSION="'):
+                        # Extract the session key
+                        start = line.find('"') + 1
+                        end = line.rfind('"')
+                        if start > 0 and end > start:
+                            session_key = line[start:end]
+                            break
+
+                if session_key:
+                    logger.info("Login successful! Session key obtained.")
+                    self.session_key = session_key
+                    self.cache_session(session_key)
+
+                    # Try to download main SSH key
+                    self.download_main_ssh_key()
+
+                    # Reload SSH key into agent after download
+                    self.load_ssh_key_to_agent()
+
+                    logger.success("Successfully logged in to Bitwarden")
+                    return True
+                else:
+                    logger.error("Failed to extract session key from login output")
+                    logger.debug(f"Login output: {login_result.stdout}")
+                    return False
+
             else:
                 logger.error(f"Unknown Bitwarden status: {current_status}")
                 return False
