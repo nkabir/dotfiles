@@ -368,14 +368,22 @@ def login():
         raise typer.Exit(1)
 
 @app.command()
-def unlock():
+def unlock(quiet: bool = typer.Option(False, "--quiet", "-q", help="Only output export command")):
     """Unlock an already-logged-in Bitwarden vault."""
     session_key = bw.unlock_vault()
     if session_key:
-        logger.success("Unlock successful")
+        if not quiet:
+            logger.success("Unlock successful")
+            logger.info("To use this session, run:")
+            logger.info(f"eval $(bwcookie unlock --quiet)")
+            logger.info("Or manually export:")
         print(f"export BW_SESSION={session_key}")
+
+        # Set the session key in the global instance for immediate use
+        bw.session_key = session_key
     else:
-        logger.error("Unlock failed")
+        if not quiet:
+            logger.error("Unlock failed")
         raise typer.Exit(1)
 
 @app.command()
