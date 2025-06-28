@@ -367,6 +367,66 @@ def login():
         logger.error("Login failed")
         raise typer.Exit(1)
 
+
+@app.command()
+def logout(quiet: bool = typer.Option(False, "--quiet", "-q", help="Suppress informational output")):
+    """Logout from Bitwarden and clear all cached data."""
+    try:
+        # Logout from Bitwarden
+        result = subprocess.run(["bw", "logout"], capture_output=True, text=True)
+
+        if result.returncode == 0:
+            # Clear the session key from memory and all cached data
+            bw.session_key = None
+            bw.clear_cache()
+
+            if not quiet:
+                logger.success("Logged out from Bitwarden and cleared all cached data")
+        else:
+            # Even if logout fails, clear our local state
+            bw.session_key = None
+            bw.clear_cache()
+
+            if not quiet:
+                logger.warning(f"Logout may have failed, but local state cleared: {result.stderr}")
+
+    except subprocess.CalledProcessError as e:
+        # Even if logout fails, clear our local state
+        bw.session_key = None
+        bw.clear_cache()
+
+        if not quiet:
+            logger.warning(f"Logout may have failed, but local state cleared: {e}")
+
+
+@app.command()
+def lock(quiet: bool = typer.Option(False, "--quiet", "-q", help="Suppress informational output")):
+    """Lock the Bitwarden vault."""
+    if not bw.session_key:
+        bw.session_key = os.environ.get("BW_SESSION")
+
+    try:
+        # Lock the vault
+        result = subprocess.run(["bw", "lock"], capture_output=True, text=True)
+
+        if result.returncode == 0:
+            # Clear the session key from memory and cache
+            bw.session_key = None
+            bw.clear_cache()
+
+            if not quiet:
+                logger.success("Bitwarden vault locked and session cleared")
+        else:
+            if not quiet:
+                logger.error(f"Failed to lock vault: {result.stderr}")
+            raise typer.Exit(1)
+
+    except subprocess.CalledProcessError as e:
+        if not quiet:
+            logger.error(f"Failed to lock vault: {e}")
+        raise typer.Exit(1)
+
+
 @app.command()
 def unlock(quiet: bool = typer.Option(False, "--quiet", "-q", help="Only output export command")):
     """Unlock an already-logged-in Bitwarden vault."""
@@ -385,6 +445,7 @@ def unlock(quiet: bool = typer.Option(False, "--quiet", "-q", help="Only output 
         if not quiet:
             logger.error("Unlock failed")
         raise typer.Exit(1)
+
 
 @app.command()
 def get(key: str, field: Optional[str] = None):
@@ -419,6 +480,7 @@ def get(key: str, field: Optional[str] = None):
             logger.error(f"Key '{key}' not found")
         raise typer.Exit(1)
 
+
 @app.command()
 def value(key: str):
     """Get just the primary value (password for logins, card number for cards, notes for secure notes)."""
@@ -452,64 +514,6 @@ def value(key: str):
     except json.JSONDecodeError:
         logger.error("Failed to parse item data")
         raise typer.Exit(1)
-
-
-@app.command()
-def lock(quiet: bool = typer.Option(False, "--quiet", "-q", help="Suppress informational output")):
-    """Lock the Bitwarden vault."""
-    if not bw.session_key:
-        bw.session_key = os.environ.get("BW_SESSION")
-
-    try:
-        # Lock the vault
-        result = subprocess.run(["bw", "lock"], capture_output=True, text=True)
-
-        if result.returncode == 0:
-            # Clear the session key from memory and cache
-            bw.session_key = None
-            bw.clear_cache()
-
-            if not quiet:
-                logger.success("Bitwarden vault locked and session cleared")
-        else:
-            if not quiet:
-                logger.error(f"Failed to lock vault: {result.stderr}")
-            raise typer.Exit(1)
-
-    except subprocess.CalledProcessError as e:
-        if not quiet:
-            logger.error(f"Failed to lock vault: {e}")
-        raise typer.Exit(1)
-
-@app.command()
-def logout(quiet: bool = typer.Option(False, "--quiet", "-q", help="Suppress informational output")):
-    """Logout from Bitwarden and clear all cached data."""
-    try:
-        # Logout from Bitwarden
-        result = subprocess.run(["bw", "logout"], capture_output=True, text=True)
-
-        if result.returncode == 0:
-            # Clear the session key from memory and all cached data
-            bw.session_key = None
-            bw.clear_cache()
-
-            if not quiet:
-                logger.success("Logged out from Bitwarden and cleared all cached data")
-        else:
-            # Even if logout fails, clear our local state
-            bw.session_key = None
-            bw.clear_cache()
-
-            if not quiet:
-                logger.warning(f"Logout may have failed, but local state cleared: {result.stderr}")
-
-    except subprocess.CalledProcessError as e:
-        # Even if logout fails, clear our local state
-        bw.session_key = None
-        bw.clear_cache()
-
-        if not quiet:
-            logger.warning(f"Logout may have failed, but local state cleared: {e}")
 
 
 @app.command()
