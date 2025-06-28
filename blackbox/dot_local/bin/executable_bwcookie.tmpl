@@ -316,41 +316,6 @@ class BWCookie:
                 logger.info("Not authenticated, performing full login...")
                 email = typer.prompt("Bitwarden email")
 
-                # First login (this handles 2FA) - run interactively but capture output
-                logger.info("Logging in to Bitwarden (this will include 2FA)...")
-
-                # Use interactive login to handle 2FA properly
-                login_result = subprocess.run(["bw", "login", email])
-
-                if login_result.returncode != 0:
-                    logger.error("Login failed")
-                    return False
-
-                # After successful login, the vault is locked, so we need to unlock it
-                # The unlock will prompt for password and return a session
-                logger.info("Login successful! Getting session key...")
-
-                session_key = self.unlock_vault()
-                if session_key:
-                    self.session_key = session_key
-                    self.cache_session(session_key)
-
-                    # Try to download main SSH key
-                    self.download_main_ssh_key()
-
-                    # Reload SSH key into agent after download
-                    self.load_ssh_key_to_agent()
-
-                    logger.success("Successfully logged in to Bitwarden")
-                    return True
-                else:
-                    logger.error("Failed to get session after login")
-                    return False
-            elif current_status == "unauthenticated":
-                # Not logged in at all, need full login
-                logger.info("Not authenticated, performing full login...")
-                email = typer.prompt("Bitwarden email")
-
                 # First login (this handles 2FA) - capture output to extract session
                 logger.info("Logging in to Bitwarden (this will include 2FA)...")
 
