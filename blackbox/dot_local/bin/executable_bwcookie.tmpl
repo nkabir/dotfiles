@@ -82,7 +82,8 @@ class BWCookie:
             result = subprocess.run(
                 ["ssh-add", "-l"],
                 capture_output=True,
-                timeout=5
+                timeout=5,
+                env=os.environ
             )
             # ssh-add -l returns 0 if keys are loaded, 1 if no keys, 2 if agent not running
             return result.returncode in [0, 1]
@@ -118,6 +119,12 @@ class BWCookie:
     def load_ssh_key_to_agent(self):
         """Load SSH key into the agent if not already loaded."""
         if not self.ssh_agent_running or not self.ssh_key_path.exists():
+            logger.debug("SSH agent not running or key file doesn't exist")
+            return
+
+        # Ensure we have the SSH agent environment variables
+        if not os.environ.get("SSH_AUTH_SOCK"):
+            logger.warning("SSH_AUTH_SOCK not set, cannot communicate with SSH agent")
             return
 
         try:
@@ -125,8 +132,15 @@ class BWCookie:
             result = subprocess.run(
                 ["ssh-add", "-l"],
                 capture_output=True,
-                text=True
+                text=True,
+                env=os.environ
             )
+
+            # If agent has no keys (return code 1), that's okay - we'll add ours
+            # If agent communication fails (return code 2), that's an error
+            if result.returncode == 2:
+                logger.warning("Cannot communicate with SSH agent")
+                return
 
             # Get the public key fingerprint to compare
             pub_key_result = subprocess.run([
@@ -134,23 +148,86 @@ class BWCookie:
             ], capture_output=True, text=True)
 
             if pub_key_result.returncode == 0:
-                key_fingerprint = pub_key_result.stdout.split()[1]
+                key_fingerprint = pub_key_result.stdout.split()[1] if pub_key_result.stdout.strip() else ""
 
                 # Check if this fingerprint is in the loaded keys
-                if result.returncode == 0 and key_fingerprint in result.stdout:
+                if result.returncode == 0 and key_fingerprint and key_fingerprint in result.stdout:
                     logger.debug("SSH key already loaded in agent")
                     return
 
             # Key not loaded, add it
             logger.info("Loading SSH key into agent")
-            subprocess.run([
-                "ssh-add", str(self.ssh_key_path)
-            ], check=True, capture_output=True)
 
-            logger.info("SSH key loaded into agent successfully")
+            # Check if key file is readable and has correct permissions
+            if not os.access(self.ssh_key_path, os.R_OK):
+                logger.error(f"Cannot read SSH key file: {self.ssh_key_path}")
+                return
+
+            key_stat = self.ssh_key_path.stat()
+            if key_stat.st_mode & 0o077:
+                logger.warning(f"SSH key has overly permissive permissions: {oct(key_stat.st_mode)}")
+                self.ssh_key_path.chmod(0o600)
+                logger.info("Fixed SSH key permissions to 0600")
+
+            # Add the key with explicit environment
+            add_result = subprocess.run([
+                "ssh-add", str(self.ssh_key_path)
+            ], capture_output=True, text=True, env=os.environ)
+
+            if add_result.returncode == 0:
+                logger.info("SSH key loaded into agent successfully")
+            else:
+                logger.error(f"Failed to add SSH key: {add_result.stderr.strip()}")
+                # Check if it's a passphrase-protected key
+                if "Bad passphrase" in add_result.stderr or "incorrect passphrase" in add_result.stderr:
+                    logger.info("SSH key appears to be passphrase-protected")
+                elif "Invalid format" in add_result.stderr:
+                    logger.error("SSH key file appears to be corrupted or invalid")
+                elif "No such file" in add_result.stderr:
+                    logger.error("SSH key file not found")
 
         except subprocess.CalledProcessError as e:
             logger.warning(f"Failed to load SSH key into agent: {e}")
+        except Exception as e:
+            logger.error(f"Unexpected error loading SSH key: {e}")
+
+    def get_cached_session(self) -> Optional[str]:
+        """Get BW_SESSION from skate cache."""
+        try:
+            result = subprocess.run([
+                "skate", "get", "bwcookie:BW_SESSION"
+            ], capture_output=True, text=True)
+
+            if result.returncode == 0 and result.stdout.strip():
+                encrypted_session = result.stdout.strip()
+                session = self.decrypt_value(encrypted_session)
+                logger.debug("Retrieved BW_SESSION from skate cache")
+                return session
+            return None
+        except Exception as e:
+            logger.debug(f"Failed to get cached session: {e}")
+            return None
+
+    def cache_session(self, session_key: str):
+        """Store BW_SESSION in skate cache."""
+        try:
+            encrypted_session = self.encrypt_value(session_key)
+            subprocess.run([
+                "skate", "set", "bwcookie:BW_SESSION"
+            ], input=encrypted_session.encode(), check=True)
+            logger.debug("Cached BW_SESSION in skate")
+        except Exception as e:
+            logger.warning(f"Failed to cache session: {e}")
+
+    def clear_cached_session(self):
+        """Clear BW_SESSION from skate cache."""
+        try:
+            subprocess.run([
+                "skate", "delete", "bwcookie:BW_SESSION"
+            ], capture_output=True, check=False)
+            logger.debug("Cleared cached BW_SESSION")
+        except Exception as e:
+            logger.debug(f"Failed to clear cached session: {e}")
 
     def get_ssh_public_key(self) -> str:
         """Get SSH public key content."""
@@ -163,10 +240,46 @@ class BWCookie:
 
         return ssh_pub_path.read_text().strip()
 
-    def login(self) -> bool:
-        """Login to Bitwarden and store session key in memory."""
+    def validate_session(self, session_key: str) -> bool:
+        """Validate that a session key is still valid."""
         try:
-            # Check if already logged in
+            result = subprocess.run([
+                "bw", "status", "--session", session_key
+            ], capture_output=True, text=True, timeout=10)
+
+            if result.returncode == 0:
+                status = json.loads(result.stdout)
+                return status.get("status") == "unlocked"
+            return False
+        except Exception as e:
+            logger.debug(f"Session validation failed: {e}")
+            return False
+        """Get SSH public key content."""
+        ssh_pub_path = self.ssh_key_path.with_suffix(".pub")
+        if not ssh_pub_path.exists():
+            # Generate public key from private
+            subprocess.run([
+                "ssh-keygen", "-y", "-f", str(self.ssh_key_path)
+            ], stdout=ssh_pub_path.open('w'), check=True)
+
+        return ssh_pub_path.read_text().strip()
+
+    def login(self) -> bool:
+        """Login to Bitwarden and store session key in memory and cache."""
+        try:
+            # First check if we have a cached session
+            cached_session = self.get_cached_session()
+            if cached_session:
+                logger.info("Found cached session, validating...")
+                if self.validate_session(cached_session):
+                    logger.success("Using valid cached session")
+                    self.session_key = cached_session
+                    return True
+                else:
+                    logger.info("Cached session is invalid, clearing cache")
+                    self.clear_cached_session()
+
+            # Check current Bitwarden status
             result = subprocess.run(["bw", "status"], capture_output=True, text=True)
             status = json.loads(result.stdout)
 
@@ -175,58 +288,78 @@ class BWCookie:
 
             if current_status == "unlocked":
                 logger.info("Already logged in and unlocked")
-                # Get session key from environment or prompt
-                self.session_key = os.environ.get("BW_SESSION")
-                if not self.session_key:
-                    logger.error("BW_SESSION not found in environment")
-                    return False
-                return True
+                # Get session key from environment
+                session_key = os.environ.get("BW_SESSION")
+                if session_key:
+                    # Validate the environment session
+                    if self.validate_session(session_key):
+                        logger.success("Using valid environment session")
+                        self.session_key = session_key
+                        self.cache_session(session_key)
+                        return True
+                    else:
+                        logger.info("Environment session is invalid")
+
+                # If no valid environment session, we need to unlock
+                logger.info("No valid session found, need to unlock")
+                session_key = self.unlock_vault()
+                if session_key:
+                    self.session_key = session_key
+                    self.cache_session(session_key)
+                    return True
+                return False
+
             elif current_status == "locked":
                 # Vault is locked, just need to unlock
                 logger.info("Vault is locked, unlocking...")
-                password = typer.prompt("Bitwarden password", hide_input=True)
-                result = subprocess.run(
-                    ["bw", "unlock", "--raw", password],
-                    capture_output=True,
-                    text=True,
-                    check=True
-                )
-                self.session_key = result.stdout.strip()
-                logger.success("Successfully unlocked Bitwarden vault")
+                session_key = self.unlock_vault()
+                if session_key:
+                    self.session_key = session_key
+                    self.cache_session(session_key)
 
-                # Try to download main SSH key
-                self.download_main_ssh_key()
+                    # Try to download main SSH key
+                    self.download_main_ssh_key()
 
-                # Reload SSH key into agent after download
-                self.load_ssh_key_to_agent()
+                    # Reload SSH key into agent after download
+                    self.load_ssh_key_to_agent()
 
-                return True
+                    logger.success("Successfully unlocked Bitwarden vault")
+                    return True
+                return False
+
             elif current_status == "unauthenticated":
                 # Not logged in at all, need full login
                 logger.info("Not authenticated, performing full login...")
                 email = typer.prompt("Bitwarden email")
 
-                # First login
-                subprocess.run(["bw", "login", email], check=True)
+                # First login (this handles 2FA) - run interactively
+                logger.info("Logging in to Bitwarden (this will include 2FA)...")
+                login_result = subprocess.run(["bw", "login", email])
 
-                # Then unlock
-                password = typer.prompt("Bitwarden password", hide_input=True)
-                result = subprocess.run(
-                    ["bw", "unlock", "--raw", password],
-                    capture_output=True,
-                    text=True,
-                    check=True
-                )
-                self.session_key = result.stdout.strip()
-                logger.success("Successfully logged in to Bitwarden")
+                if login_result.returncode != 0:
+                    logger.error("Login failed")
+                    return False
 
-                # Try to download main SSH key
-                self.download_main_ssh_key()
+                # After login, the vault is locked and we need to unlock it to get a session
+                logger.info("Login successful! Now unlocking vault to get session...")
+                logger.info("(This is normal Bitwarden behavior - login and unlock are separate steps)")
 
-                # Reload SSH key into agent after download
-                self.load_ssh_key_to_agent()
+                # Get session by unlocking
+                session_key = self.unlock_vault()
+                if session_key:
+                    self.session_key = session_key
 
-                return True
+                    # Try to download main SSH key
+                    self.download_main_ssh_key()
+
+                    # Reload SSH key into agent after download
+                    self.load_ssh_key_to_agent()
+
+                    logger.success("Successfully logged in to Bitwarden")
+                    return True
+                else:
+                    logger.error("Failed to unlock vault after login")
+                    return False
             else:
                 logger.error(f"Unknown Bitwarden status: {current_status}")
                 return False
@@ -242,6 +375,17 @@ class BWCookie:
 
     def unlock_vault(self) -> Optional[str]:
         """Unlock Bitwarden vault and return session key."""
+        # First check if we have a cached session
+        cached_session = self.get_cached_session()
+        if cached_session:
+            logger.info("Found cached session, validating...")
+            if self.validate_session(cached_session):
+                logger.success("Using valid cached session")
+                return cached_session
+            else:
+                logger.info("Cached session is invalid, clearing cache")
+                self.clear_cached_session()
+
         try:
             password = typer.prompt("Bitwarden password", hide_input=True)
             result = subprocess.run(
@@ -252,6 +396,10 @@ class BWCookie:
             )
             session_key = result.stdout.strip()
             logger.success("Successfully unlocked Bitwarden vault")
+
+            # Cache the new session
+            self.cache_session(session_key)
+
             return session_key
         except subprocess.CalledProcessError as e:
             logger.error(f"Failed to unlock vault: {e}")
@@ -418,7 +566,27 @@ echo '{encrypted}' | age -d -i <(ssh-add -L | head -1 | ssh-keygen -f /dev/stdin
 
         return None
 
-    def get_field(self, key: str, field: str) -> Optional[str]:
+    def clear_cache(self, key: Optional[str] = None):
+        """Clear cached values."""
+        if key:
+            # Clear specific key
+            subprocess.run(["skate", "delete", f"bwcookie:{key}"], check=False)
+            # Also clear any field-specific caches
+            result = subprocess.run(["skate", "list"], capture_output=True, text=True)
+            if result.returncode == 0:
+                for line in result.stdout.strip().split('\n'):
+                    if line.startswith(f"bwcookie:{key}:"):
+                        subprocess.run(["skate", "delete", line.split()[0]], check=False)
+        else:
+            # Clear all bwcookie entries including BW_SESSION
+            result = subprocess.run(["skate", "list"], capture_output=True, text=True)
+            if result.returncode == 0 and result.stdout.strip():
+                for line in result.stdout.strip().split('\n'):
+                    if line and line.strip():
+                        # skate list returns "key value" pairs
+                        parts = line.split(None, 1)
+                        if parts and parts[0].startswith("bwcookie:"):
+                            subprocess.run(["skate", "delete", parts[0]], check=False)
         """Get specific field from Bitwarden item."""
         # Check cache first
         cache_key = f"{key}:{field}"
@@ -467,6 +635,28 @@ echo '{encrypted}' | age -d -i <(ssh-add -L | head -1 | ssh-keygen -f /dev/stdin
             logger.error("Failed to parse item JSON")
             return None
 
+    def clear_cache(self, key: Optional[str] = None):
+        """Clear cached values."""
+        if key:
+            # Clear specific key
+            subprocess.run(["skate", "delete", f"bwcookie:{key}"], check=False)
+            # Also clear any field-specific caches
+            result = subprocess.run(["skate", "list"], capture_output=True, text=True)
+            if result.returncode == 0:
+                for line in result.stdout.strip().split('\n'):
+                    if line.startswith(f"bwcookie:{key}:"):
+                        subprocess.run(["skate", "delete", line.split()[0]], check=False)
+        else:
+            # Clear all bwcookie entries including BW_SESSION
+            result = subprocess.run(["skate", "list"], capture_output=True, text=True)
+            if result.returncode == 0 and result.stdout.strip():
+                for line in result.stdout.strip().split('\n'):
+                    if line and line.strip():
+                        # skate list returns "key value" pairs
+                        parts = line.split(None, 1)
+                        if parts and parts[0].startswith("bwcookie:"):
+                            subprocess.run(["skate", "delete", parts[0]], check=False)
+
 # Global instance
 bw = BWCookie()
 
@@ -475,7 +665,7 @@ def login():
     """Login to Bitwarden."""
     if bw.login():
         logger.success("Login successful")
-        logger.info(f"Export BW_SESSION={bw.session_key}")
+        logger.info("Session cached for future use")
     else:
         logger.error("Login failed")
         raise typer.Exit(1)
@@ -487,6 +677,7 @@ def unlock(quiet: bool = typer.Option(False, "--quiet", "-q", help="Only output 
     if session_key:
         if not quiet:
             logger.success("Unlock successful")
+            logger.info("Session cached for future use")
             logger.info("To use this session, run:")
             logger.info(f"eval $(bwcookie unlock --quiet)")
             logger.info("Or manually export:")
@@ -509,8 +700,10 @@ def ssh_agent(
         if bw.is_ssh_agent_available():
             if not quiet:
                 logger.info("SSH agent is running and responsive")
+                logger.info(f"SSH_AUTH_SOCK={os.environ.get('SSH_AUTH_SOCK')}")
+                logger.info(f"SSH_AGENT_PID={os.environ.get('SSH_AGENT_PID')}")
             try:
-                result = subprocess.run(["ssh-add", "-l"], capture_output=True, text=True)
+                result = subprocess.run(["ssh-add", "-l"], capture_output=True, text=True, env=os.environ)
                 if result.returncode == 0:
                     keys = [line for line in result.stdout.strip().split('\n') if line.strip()]
                     if not quiet:
@@ -526,6 +719,8 @@ def ssh_agent(
         else:
             if not quiet:
                 logger.error("SSH agent is not available")
+                logger.info(f"SSH_AUTH_SOCK={os.environ.get('SSH_AUTH_SOCK', 'not set')}")
+                logger.info(f"SSH_AGENT_PID={os.environ.get('SSH_AGENT_PID', 'not set')}")
             raise typer.Exit(1)
 
     elif action == "start":
@@ -535,6 +730,8 @@ def ssh_agent(
         else:
             bw.start_ssh_agent()
             if bw.ssh_agent_running:
+                # Try to load the key after starting agent
+                bw.load_ssh_key_to_agent()
                 if not quiet:
                     logger.success("SSH agent started")
                     logger.info(f"SSH_AUTH_SOCK={os.environ.get('SSH_AUTH_SOCK')}")
@@ -545,6 +742,11 @@ def ssh_agent(
                 raise typer.Exit(1)
 
     elif action == "reload":
+        if not bw.is_ssh_agent_available():
+            if not quiet:
+                logger.error("SSH agent is not running")
+            raise typer.Exit(1)
+
         bw.load_ssh_key_to_agent()
         if not quiet:
             logger.success("SSH key reloaded into agent")
@@ -575,9 +777,6 @@ def ssh_agent(
 @app.command()
 def lock(quiet: bool = typer.Option(False, "--quiet", "-q", help="Suppress informational output")):
     """Lock the Bitwarden vault."""
-    if not bw.session_key:
-        bw.session_key = os.environ.get("BW_SESSION")
-
     try:
         # Lock the vault
         result = subprocess.run(["bw", "lock"], capture_output=True, text=True)
@@ -585,19 +784,28 @@ def lock(quiet: bool = typer.Option(False, "--quiet", "-q", help="Suppress infor
         if result.returncode == 0:
             # Clear the session key from memory and cache
             bw.session_key = None
+            bw.clear_cached_session()
             bw.clear_cache()
 
             if not quiet:
-                logger.success("Bitwarden vault locked and session cleared")
+                logger.success("Bitwarden vault locked and all cache cleared")
         else:
+            # Even if lock fails, clear our local state
+            bw.session_key = None
+            bw.clear_cached_session()
+            bw.clear_cache()
+
             if not quiet:
-                logger.error(f"Failed to lock vault: {result.stderr}")
-            raise typer.Exit(1)
+                logger.warning(f"Lock may have failed, but local state cleared: {result.stderr}")
 
     except subprocess.CalledProcessError as e:
+        # Even if lock fails, clear our local state
+        bw.session_key = None
+        bw.clear_cached_session()
+        bw.clear_cache()
+
         if not quiet:
-            logger.error(f"Failed to lock vault: {e}")
-        raise typer.Exit(1)
+            logger.warning(f"Lock may have failed, but local state cleared: {e}")
 
 @app.command()
 def logout(quiet: bool = typer.Option(False, "--quiet", "-q", help="Suppress informational output")):
@@ -609,6 +817,7 @@ def logout(quiet: bool = typer.Option(False, "--quiet", "-q", help="Suppress inf
         if result.returncode == 0:
             # Clear the session key from memory and all cached data
             bw.session_key = None
+            bw.clear_cached_session()
             bw.clear_cache()
 
             if not quiet:
@@ -616,6 +825,7 @@ def logout(quiet: bool = typer.Option(False, "--quiet", "-q", help="Suppress inf
         else:
             # Even if logout fails, clear our local state
             bw.session_key = None
+            bw.clear_cached_session()
             bw.clear_cache()
 
             if not quiet:
@@ -624,6 +834,7 @@ def logout(quiet: bool = typer.Option(False, "--quiet", "-q", help="Suppress inf
     except subprocess.CalledProcessError as e:
         # Even if logout fails, clear our local state
         bw.session_key = None
+        bw.clear_cached_session()
         bw.clear_cache()
 
         if not quiet:
@@ -632,11 +843,18 @@ def logout(quiet: bool = typer.Option(False, "--quiet", "-q", help="Suppress inf
 @app.command()
 def get(key: str, field: Optional[str] = None):
     """Get a secret (returns full JSON). For specific fields: number, expMonth, expYear, code, cardholderName, password, username, notes."""
+    # Check for cached session first
     if not bw.session_key:
         bw.session_key = os.environ.get("BW_SESSION")
         if not bw.session_key:
-            logger.error("Not logged in. Run 'bwcookie login' first.")
-            raise typer.Exit(1)
+            # Try to get from cache
+            cached_session = bw.get_cached_session()
+            if cached_session and bw.validate_session(cached_session):
+                bw.session_key = cached_session
+                logger.debug("Using cached session for get operation")
+            else:
+                logger.error("Not logged in. Run 'bwcookie login' first.")
+                raise typer.Exit(1)
 
     # Use spinner only if stdout is a TTY (interactive)
     if sys.stdout.isatty():
@@ -665,11 +883,18 @@ def get(key: str, field: Optional[str] = None):
 @app.command()
 def value(key: str):
     """Get just the primary value (password for logins, card number for cards, notes for secure notes)."""
+    # Check for cached session first
     if not bw.session_key:
         bw.session_key = os.environ.get("BW_SESSION")
         if not bw.session_key:
-            logger.error("Not logged in. Run 'bwcookie login' first.")
-            raise typer.Exit(1)
+            # Try to get from cache
+            cached_session = bw.get_cached_session()
+            if cached_session and bw.validate_session(cached_session):
+                bw.session_key = cached_session
+                logger.debug("Using cached session for value operation")
+            else:
+                logger.error("Not logged in. Run 'bwcookie login' first.")
+                raise typer.Exit(1)
 
     # Get full JSON
     json_str = bw.get(key)
@@ -798,11 +1023,18 @@ def list(
     names_only: bool = typer.Option(False, "--names-only", "-n", help="Return only item names")
 ):
     """List all items in Bitwarden as JSON."""
+    # Check for cached session first
     if not bw.session_key:
         bw.session_key = os.environ.get("BW_SESSION")
         if not bw.session_key:
-            logger.error("Not logged in. Run 'bwcookie login' first.")
-            raise typer.Exit(1)
+            # Try to get from cache
+            cached_session = bw.get_cached_session()
+            if cached_session and bw.validate_session(cached_session):
+                bw.session_key = cached_session
+                logger.debug("Using cached session for list operation")
+            else:
+                logger.error("Not logged in. Run 'bwcookie login' first.")
+                raise typer.Exit(1)
 
     # Build command
     cmd = ["bw", "list", "items", "--session", bw.session_key]
