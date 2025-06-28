@@ -105,8 +105,7 @@ class BWCookie:
                 logger.info("Vault is locked, unlocking...")
                 password = typer.prompt("Bitwarden password", hide_input=True)
                 result = subprocess.run(
-                    ["bw", "unlock", "--raw"],
-                    input=password,
+                    ["bw", "unlock", "--raw", password],
                     capture_output=True,
                     text=True,
                     check=True
@@ -128,8 +127,7 @@ class BWCookie:
                 # Then unlock
                 password = typer.prompt("Bitwarden password", hide_input=True)
                 result = subprocess.run(
-                    ["bw", "unlock", "--raw"],
-                    input=password,
+                    ["bw", "unlock", "--raw", password],
                     capture_output=True,
                     text=True,
                     check=True
@@ -158,8 +156,7 @@ class BWCookie:
         try:
             password = typer.prompt("Bitwarden password", hide_input=True)
             result = subprocess.run(
-                ["bw", "unlock", "--raw"],
-                input=password,
+                ["bw", "unlock", "--raw", password],
                 capture_output=True,
                 text=True,
                 check=True
