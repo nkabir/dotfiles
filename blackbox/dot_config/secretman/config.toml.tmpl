@@ -1,0 +1,31 @@
+# Secret Manager Configuration
+
+[general]
+# SSH key name in Bitwarden
+ssh_key_name = "ssh.key.ed25519.main"
+
+# Local paths
+ssh_key_path = "{{ .chezmoi.homeDir }}/.ssh/id_ed25519"
+age_key_path = "{{ .chezmoi.homeDir }}/.config/secretman/age.key"
+session_file = "{{ .chezmoi.homeDir }}/.config/secretman/session"
+
+[encryption]
+# Use age encryption by default
+use_encryption = true
+
+# Age recipient (will be auto-generated from SSH key)
+# recipient = "age1..."
+
+[skate]
+# Prefix for encrypted values in skate
+encrypted_prefix = "encrypted:"
+
+{{ if .isUbuntu -}}
+[ubuntu]
+# Ubuntu-specific configuration
+install_method = "snap"
+{{- else if .isAlmaLinux -}}
+[almalinux]
+# AlmaLinux-specific configuration
+install_method = "rpm"
+{{- end }}

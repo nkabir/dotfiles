@@ -20,9 +20,6 @@ unset _RAGE_CORE
 # unset _GPG_CORE
 # . ~/.local/lib/gpg/core.bash
 
-# unset _YADM_CORE
-# . ~/.local/lib/yadm/core.bash
-
 # unset _GUM_CORE
 # . ~/.local/lib/gum/core.bash
 

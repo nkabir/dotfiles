@@ -21,4 +21,7 @@ Acquire::AllowDowngradeToInsecureRepositories "true";
 // Configuration for local repository handling
 APT::Get::Assume-Yes "false";
 APT::Get::Fix-Broken "true";
+
+// Disable IPv6 for APT
+Acquire::ForceIPv4 "true";
 {{- end }}

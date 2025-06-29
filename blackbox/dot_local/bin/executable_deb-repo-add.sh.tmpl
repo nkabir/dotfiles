@@ -4,52 +4,58 @@
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 {{- if .isUbuntu }}
-set -euo pipefail
+set -eo pipefail
 
-# Configuration
-DEB_REPO_DIR="{{ .chezmoi.homeDir }}/.local/share/deb"
+# Load logger library
+HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
+    &> /dev/null && pwd 2> /dev/null; )";
+. "${HERE}/../lib/logger/core.bash"
+
+# Configuration - Use the same paths as deb-repo-init.sh
+DEB_REPO_DIR="/var/cache/apt/local-repo"
 POOL_DIR="${DEB_REPO_DIR}/pool"
 DISTS_DIR="${DEB_REPO_DIR}/dists"
 CACHE_DIR="{{ env "XDG_CACHE_HOME" | default (printf "%s/.cache" .chezmoi.homeDir) }}/deb"
+USER_REPO_LINK="{{ .chezmoi.homeDir }}/.local/share/deb"
 
 REPO_CODENAME="local"
 REPO_COMPONENT="main"
 REPO_ARCHITECTURE="amd64"
-
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
-
-log_info() {
-    echo -e "${GREEN}[INFO]${NC} $1"
-}
-
-log_warn() {
-    echo -e "${YELLOW}[WARN]${NC} $1"
-}
-
-log_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
-
-log_debug() {
-    echo -e "${BLUE}[DEBUG]${NC} $1"
-}
 
 # Function to parse deb package information
 parse_deb_info() {
     local deb_file="$1"
 
     if [[ ! -f "$deb_file" ]]; then
-        log_error "File not found: $deb_file"
+        logger::error "File not found: $deb_file" >&2
         return 1
     fi
 
+    # Check file size
+    local file_size
+    file_size=$(stat -c%s "$deb_file" 2>/dev/null || echo "0")
+    if [[ "$file_size" -lt 1000 ]]; then
+        logger::error "File appears to be too small ($file_size bytes) to be a valid .deb package" >&2
+        logger::debug "File contents preview:" >&2
+        head -c 200 "$deb_file" | hexdump -C | head -5 | sed 's/^/  /' >&2
+        return 1
+    fi
+
+    # Check file magic bytes
+    local file_magic
+    file_magic=$(file -b "$deb_file" 2>/dev/null || echo "unknown")
+    logger::debug "File type detected: $file_magic" >&2
+
     if ! dpkg-deb --info "$deb_file" >/dev/null 2>&1; then
-        log_error "Invalid Debian package: $deb_file"
+        logger::error "Invalid Debian package: $deb_file" >&2
+        logger::debug "File size: $(du -h "$deb_file" | cut -f1)" >&2
+        logger::debug "File type: $file_magic" >&2
+
+        # Try to get more specific error from dpkg-deb
+        local dpkg_error
+        dpkg_error=$(dpkg-deb --info "$deb_file" 2>&1 || true)
+        logger::debug "dpkg-deb error: $dpkg_error" >&2
+
         return 1
     fi
 
@@ -72,41 +78,41 @@ calculate_checksums() {
 
 # Function to update repository indexes
 update_repo_indexes() {
-    log_info "Updating repository indexes..."
+    logger::info "Updating repository indexes..."
 
     cd "${DEB_REPO_DIR}"
 
-    # Generate Packages file
-    dpkg-scanpackages -m "pool/${REPO_COMPONENT}" > "dists/${REPO_CODENAME}/${REPO_COMPONENT}/binary-${REPO_ARCHITECTURE}/Packages"
-    gzip -9c "dists/${REPO_CODENAME}/${REPO_COMPONENT}/binary-${REPO_ARCHITECTURE}/Packages" > "dists/${REPO_CODENAME}/${REPO_COMPONENT}/binary-${REPO_ARCHITECTURE}/Packages.gz"
+    # Generate Packages file (using sudo)
+    sudo dpkg-scanpackages -m "pool/${REPO_COMPONENT}" | sudo tee "dists/${REPO_CODENAME}/${REPO_COMPONENT}/binary-${REPO_ARCHITECTURE}/Packages" > /dev/null
+    sudo gzip -9c "dists/${REPO_CODENAME}/${REPO_COMPONENT}/binary-${REPO_ARCHITECTURE}/Packages" | sudo tee "dists/${REPO_CODENAME}/${REPO_COMPONENT}/binary-${REPO_ARCHITECTURE}/Packages.gz" > /dev/null
 
     # Update Release file
     local release_file="dists/${REPO_CODENAME}/Release"
     local temp_release=$(mktemp)
 
     # Update date and preserve metadata
-    sed "/^Date:/c\\Date: $(date -u '+%a, %d %b %Y %H:%M:%S UTC')" "${release_file}" | \
+    sudo sed "/^Date:/c\\Date: $(date -u '+%a, %d %b %Y %H:%M:%S UTC')" "${release_file}" | \
     grep -v "^MD5Sum:\|^SHA1:\|^SHA256:\|^ " > "${temp_release}"
 
     # Add checksums
     echo "MD5Sum:" >> "${temp_release}"
-    find dists/${REPO_CODENAME} -type f ! -name "Release*" -exec md5sum {} \; | \
+    sudo find dists/${REPO_CODENAME} -type f ! -name "Release*" -exec md5sum {} \; | \
         sed 's|dists/'${REPO_CODENAME}'/| |' | \
         awk '{printf " %s %8d %s\n", $1, length($1), $2}' >> "${temp_release}"
 
     echo "SHA1:" >> "${temp_release}"
-    find dists/${REPO_CODENAME} -type f ! -name "Release*" -exec sha1sum {} \; | \
+    sudo find dists/${REPO_CODENAME} -type f ! -name "Release*" -exec sha1sum {} \; | \
         sed 's|dists/'${REPO_CODENAME}'/| |' | \
         awk '{printf " %s %8d %s\n", $1, length($1), $2}' >> "${temp_release}"
 
     echo "SHA256:" >> "${temp_release}"
-    find dists/${REPO_CODENAME} -type f ! -name "Release*" -exec sha256sum {} \; | \
+    sudo find dists/${REPO_CODENAME} -type f ! -name "Release*" -exec sha256sum {} \; | \
         sed 's|dists/'${REPO_CODENAME}'/| |' | \
         awk '{printf " %s %8d %s\n", $1, length($1), $2}' >> "${temp_release}"
 
-    mv "${temp_release}" "${release_file}"
+    sudo mv "${temp_release}" "${release_file}"
 
-    log_info "Repository indexes updated successfully"
+    logger::info "Repository indexes updated successfully"
 }
 
 # Function to add a package file
@@ -114,7 +120,7 @@ add_package() {
     local source_file="$1"
 
     if [[ ! -f "$source_file" ]]; then
-        log_error "File not found: $source_file"
+        logger::error "File not found: $source_file"
         return 1
     fi
 
@@ -125,38 +131,75 @@ add_package() {
     fi
 
     read -r package_name version architecture <<< "$parse_result"
-    log_info "Adding package: $package_name version $version ($architecture)"
+    logger::info "Adding package: $package_name version $version ($architecture)"
 
-    # Create package pool structure
+    # Create package pool structure (using sudo since /var/cache/apt/local-repo requires root)
     local package_dir="${POOL_DIR}/${REPO_COMPONENT}/${package_name:0:1}/${package_name}"
-    mkdir -p "$package_dir"
+    sudo mkdir -p "$package_dir"
 
     # Generate destination filename
     local filename="${package_name}_${version}_${architecture}.deb"
     local dest_file="${package_dir}/${filename}"
 
     if [[ -f "$dest_file" ]]; then
-        log_warn "Package already exists: $filename"
+        logger::warn "Package already exists: $filename"
         read -p "Overwrite? [y/N] " -n 1 -r
         echo
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            log_info "Skipping package addition"
+            logger::info "Skipping package addition"
             return 0
         fi
     fi
 
-    # Copy package to repository
-    cp "$source_file" "$dest_file"
-    log_info "Added package to: $dest_file"
+    # Copy package to repository (using sudo)
+    sudo cp "$source_file" "$dest_file"
+    logger::info "Added package to: $dest_file"
 
     # Show package details
-    log_debug "Package details:"
+    logger::debug "Package details:"
     calculate_checksums "$dest_file" | sed 's/^/  /'
 
     # Update repository indexes
     update_repo_indexes
 
-    log_info "Successfully added package: $package_name"
+    logger::info "Successfully added package: $package_name"
+}
+
+# Function to detect if input is a URL
+is_url() {
+    local input="$1"
+    [[ "$input" =~ ^https?:// ]]
+}
+
+# Function to download file from URL
+download_file() {
+    local url="$1"
+    local temp_dir="$2"
+    local filename
+
+    # Extract filename from URL or generate one
+    filename=$(basename "$url")
+    if [[ ! "$filename" =~ \.deb$ ]]; then
+        filename="downloaded_package.deb"
+    fi
+
+    local dest_file="${temp_dir}/${filename}"
+
+    # Check if curl is available
+    if ! command -v curl >/dev/null 2>&1; then
+        logger::error "curl not found. Please install curl to download from URLs." >&2
+        return 1
+    fi
+
+    logger::info "Downloading from URL: $url" >&2
+    if curl -L --user-agent "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" -o "$dest_file" "$url" --progress-bar; then
+        logger::info "Downloaded: $filename ($(du -h "$dest_file" | cut -f1))" >&2
+        echo "$dest_file"
+        return 0
+    else
+        logger::error "Failed to download with curl: $url" >&2
+        return 1
+    fi
 }
 
 # Function to download and add package
@@ -165,27 +208,83 @@ download_and_add() {
     local temp_dir
     temp_dir=$(mktemp -d)
 
-    log_info "Downloading package: $package_spec"
+    # Check if the input is a URL
+    if is_url "$package_spec"; then
+        logger::info "Detected URL: $package_spec"
 
-    # Download package without installing
-    if apt download "$package_spec" -o Dir::Cache::Archives="$temp_dir"; then
-        # Add all downloaded files
-        local downloaded_files
-        mapfile -t downloaded_files < <(find "$temp_dir" -name "*.deb")
+        # Validate that it's likely a .deb file
+        if [[ ! "$package_spec" =~ \.deb(\?.*)?$ ]]; then
+            logger::warn "URL does not appear to point to a .deb file: $package_spec"
+            read -p "Continue anyway? [y/N] " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                logger::info "Download cancelled"
+                rm -rf "$temp_dir"
+                return 0
+            fi
+        fi
 
-        if [[ ${#downloaded_files[@]} -eq 0 ]]; then
-            log_error "No .deb files downloaded for: $package_spec"
+        # Download the file
+        local downloaded_file
+        if downloaded_file=$(download_file "$package_spec" "$temp_dir"); then
+            logger::debug "Verifying downloaded file: $downloaded_file"
+
+            # Verify it's a valid .deb file
+            if parse_deb_info "$downloaded_file" >/dev/null; then
+                add_package "$downloaded_file"
+            else
+                logger::error "Downloaded file is not a valid Debian package"
+                logger::info "Troubleshooting information:"
+                logger::info "  File: $downloaded_file"
+                logger::info "  Size: $(ls -lh "$downloaded_file" | awk '{print $5}')"
+                logger::info "  Type: $(file -b "$downloaded_file" 2>/dev/null || echo 'unknown')"
+
+                # Check if it might be an HTML error page
+                if head -c 100 "$downloaded_file" | grep -qi "<!DOCTYPE\|<html"; then
+                    logger::error "Downloaded file appears to be an HTML page (possibly an error page)"
+                    logger::debug "First few lines of downloaded file:"
+                    head -5 "$downloaded_file" | sed 's/^/  /'
+                fi
+
+                # Keep the file for debugging if requested
+                read -p "Keep downloaded file for debugging? [y/N] " -n 1 -r
+                echo
+                if [[ $REPLY =~ ^[Yy]$ ]]; then
+                    local debug_file="$HOME/debug_$(basename "$downloaded_file")"
+                    cp "$downloaded_file" "$debug_file"
+                    logger::info "Debug file saved as: $debug_file"
+                fi
+
+                rm -rf "$temp_dir"
+                return 1
+            fi
+        else
             rm -rf "$temp_dir"
             return 1
         fi
-
-        for file in "${downloaded_files[@]}"; do
-            add_package "$file"
-        done
     else
-        log_error "Failed to download package: $package_spec"
-        rm -rf "$temp_dir"
-        return 1
+        # Traditional apt download
+        logger::info "Downloading package from repositories: $package_spec"
+
+        if apt download "$package_spec" -o Dir::Cache::Archives="$temp_dir"; then
+            # Add all downloaded files
+            local downloaded_files
+            mapfile -t downloaded_files < <(find "$temp_dir" -name "*.deb")
+
+            if [[ ${#downloaded_files[@]} -eq 0 ]]; then
+                logger::error "No .deb files downloaded for: $package_spec"
+                rm -rf "$temp_dir"
+                return 1
+            fi
+
+            for file in "${downloaded_files[@]}"; do
+                add_package "$file"
+            done
+        else
+            logger::error "Failed to download package: $package_spec"
+            rm -rf "$temp_dir"
+            return 1
+        fi
     fi
 
     rm -rf "$temp_dir"
@@ -193,7 +292,7 @@ download_and_add() {
 
 # Function to list packages in repository
 list_packages() {
-    log_info "Packages in local repository:"
+    logger::info "Packages in local repository:"
 
     if [[ ! -f "${DISTS_DIR}/${REPO_CODENAME}/${REPO_COMPONENT}/binary-${REPO_ARCHITECTURE}/Packages" ]]; then
         echo "  No packages found (repository may not be initialized)"
@@ -214,34 +313,34 @@ list_packages() {
 remove_package() {
     local package_name="$1"
 
-    log_info "Removing package: $package_name"
+    logger::info "Removing package: $package_name"
 
     # Find package files
     local package_files
-    mapfile -t package_files < <(find "${POOL_DIR}" -name "${package_name}_*.deb")
+    mapfile -t package_files < <(sudo find "${POOL_DIR}" -name "${package_name}_*.deb")
 
     if [[ ${#package_files[@]} -eq 0 ]]; then
-        log_warn "No packages found matching: $package_name"
+        logger::warn "No packages found matching: $package_name"
         return 0
     fi
 
     local removed_count=0
     for file in "${package_files[@]}"; do
-        log_info "Removing: ${file##*/}"
-        rm -f "$file"
+        logger::info "Removing: ${file##*/}"
+        sudo rm -f "$file"
         ((removed_count++))
 
         # Remove empty directories
         local dir=$(dirname "$file")
-        if [[ -d "$dir" ]] && [[ -z "$(ls -A "$dir")" ]]; then
-            rmdir "$dir" 2>/dev/null || true
+        if [[ -d "$dir" ]] && [[ -z "$(sudo ls -A "$dir")" ]]; then
+            sudo rmdir "$dir" 2>/dev/null || true
         fi
     done
 
     # Update repository indexes
     update_repo_indexes
 
-    log_info "Removed $removed_count package(s) for: $package_name"
+    logger::info "Removed $removed_count package(s) for: $package_name"
 }
 
 # Function to show usage
@@ -251,7 +350,7 @@ Usage: $0 [OPTIONS] COMMAND
 
 Commands:
   add FILE         Add a local .deb file to the repository
-  download SPEC    Download and add a package from apt repositories
+  download SPEC    Download and add a package from apt repositories or HTTP/HTTPS URLs
   list            List all packages in the repository
   remove PACKAGE   Remove a package from the repository
   update          Update repository indexes
@@ -262,7 +361,9 @@ Options:
 Examples:
   $0 add ./my-package_1.0.0_amd64.deb
   $0 download firefox
-  $0 download firefox=85.0.1+build1-0ubuntu1
+  $0 download firefox=85.0.1+build1-0ubuntu
+  $0 download https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+  $0 download https://github.com/user/project/releases/download/v1.0.0/package.deb
   $0 list
   $0 remove my-package
   $0 update
@@ -273,14 +374,14 @@ EOF
 main() {
     # Check if repository is initialized
     if [[ ! -d "$DEB_REPO_DIR" ]]; then
-        log_error "Repository not initialized. Run 'deb-repo-init.sh' first."
+        logger::error "Repository not initialized. Run 'deb-repo-init.sh' first."
         exit 1
     fi
 
     case "${1:-}" in
         "add")
             if [[ $# -lt 2 ]]; then
-                log_error "Missing file argument for add command"
+                logger::error "Missing file argument for add command"
                 show_usage
                 exit 1
             fi
@@ -288,7 +389,7 @@ main() {
             ;;
         "download")
             if [[ $# -lt 2 ]]; then
-                log_error "Missing package specification for download command"
+                logger::error "Missing package specification for download command"
                 show_usage
                 exit 1
             fi
@@ -299,7 +400,7 @@ main() {
             ;;
         "remove")
             if [[ $# -lt 2 ]]; then
-                log_error "Missing package name for remove command"
+                logger::error "Missing package name for remove command"
                 show_usage
                 exit 1
             fi
@@ -312,12 +413,12 @@ main() {
             show_usage
             ;;
         "")
-            log_error "No command specified"
+            logger::error "No command specified"
             show_usage
             exit 1
             ;;
         *)
-            log_error "Unknown command: $1"
+            logger::error "Unknown command: $1"
             show_usage
             exit 1
             ;;
