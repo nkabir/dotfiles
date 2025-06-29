@@ -30,6 +30,10 @@ if [[ -d "$HOME/bin" ]]; then
     rm -rf "$HOME/bin"
 fi
 
+# ensure homebrew is on the PATH /home/linuxbrew/.linuxbrew/bin
+export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
+
+
 # Install git-lfs if git-lfs command is available
 if command -v git-lfs &> /dev/null; then
     log_info "Installing git-lfs hooks"
