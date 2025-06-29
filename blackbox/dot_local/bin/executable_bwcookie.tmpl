@@ -64,10 +64,13 @@ class BWCookie:
         """Ensure SSH agent is running and key is loaded."""
         # Check if SSH_AUTH_SOCK is set and agent is responsive
         if self.is_ssh_agent_available():
-            logger.debug("SSH agent is available")
+            logger.debug("Using existing SSH agent")
+            logger.debug(f"SSH_AUTH_SOCK: {os.environ.get('SSH_AUTH_SOCK')}")
+            logger.debug(f"SSH_AGENT_PID: {os.environ.get('SSH_AGENT_PID')}")
             self.ssh_agent_running = True
         else:
-            logger.debug("Starting SSH agent")
+            logger.debug("No existing SSH agent found")
+            logger.info("Starting new SSH agent")
             self.start_ssh_agent()
 
         # Load the SSH key if it's not already loaded
@@ -111,6 +114,9 @@ class BWCookie:
 
             self.ssh_agent_running = True
             logger.info(f"SSH agent started with PID {os.environ.get('SSH_AGENT_PID')}")
+            logger.info("To use this SSH agent in your shell, run:")
+            logger.info(f"export SSH_AUTH_SOCK={os.environ.get('SSH_AUTH_SOCK')}")
+            logger.info(f"export SSH_AGENT_PID={os.environ.get('SSH_AGENT_PID')}")
 
         except subprocess.CalledProcessError as e:
             logger.error(f"Failed to start SSH agent: {e}")
@@ -236,13 +242,19 @@ class BWCookie:
     def validate_session(self, session_key: str) -> bool:
         """Validate that a session key is still valid."""
         try:
+            # Try to list folders as a simple test
             result = subprocess.run([
-                "bw", "status", "--session", session_key
+                "bw", "list", "folders", "--session", session_key
             ], capture_output=True, text=True, timeout=10)
 
+            # If we get a successful response, the session is valid
             if result.returncode == 0:
-                status = json.loads(result.stdout)
-                return status.get("status") == "unlocked"
+                # Try to parse the JSON to ensure it's valid output
+                try:
+                    json.loads(result.stdout)
+                    return True
+                except json.JSONDecodeError:
+                    return False
             return False
         except Exception as e:
             logger.debug(f"Session validation failed: {e}")
@@ -316,53 +328,61 @@ class BWCookie:
                 logger.info("Not authenticated, performing full login...")
                 email = typer.prompt("Bitwarden email")
 
-                # First login (this handles 2FA) - capture output to extract session
-                logger.info("Logging in to Bitwarden (this will include 2FA)...")
+                logger.info("Logging in to Bitwarden (you may need to enter your password and 2FA code)...")
 
-                # Run login and capture output
-                login_result = subprocess.run(
-                    ["bw", "login", email],
-                    capture_output=True,
-                    text=True
-                )
+                try:
+                    # First, just do the login interactively
+                    login_result = subprocess.run(
+                        ["bw", "login", email],
+                        stdin=sys.stdin
+                    )
 
-                if login_result.returncode != 0:
-                    logger.error("Login failed")
-                    if login_result.stderr:
-                        logger.error(f"Error: {login_result.stderr}")
-                    return False
+                    if login_result.returncode != 0:
+                        logger.error("Login failed")
+                        return False
 
-                # Extract session key from the login output
-                # Look for the BW_SESSION value in the output
-                output_lines = login_result.stdout.strip().split('\n')
-                session_key = None
+                    # After successful login, we need to unlock the vault
+                    # The session key shown during login is not valid until unlocked
+                    logger.info("Login successful! Now unlocking vault to get session key...")
 
-                for line in output_lines:
-                    # Look for the export BW_SESSION line
-                    if line.startswith('$ export BW_SESSION="') or line.startswith('export BW_SESSION="'):
-                        # Extract the session key
-                        start = line.find('"') + 1
-                        end = line.rfind('"')
-                        if start > 0 and end > start:
-                            session_key = line[start:end]
-                            break
+                    # Get the password again to unlock
+                    password = typer.prompt("Enter your password again to unlock the vault", hide_input=True)
 
-                if session_key:
-                    logger.info("Login successful! Session key obtained.")
-                    self.session_key = session_key
-                    self.cache_session(session_key)
+                    # Unlock with --raw to get just the session key
+                    unlock_result = subprocess.run(
+                        ["bw", "unlock", "--raw", password],
+                        capture_output=True,
+                        text=True
+                    )
 
-                    # Try to download main SSH key
-                    self.download_main_ssh_key()
+                    if unlock_result.returncode == 0:
+                        session_key = unlock_result.stdout.strip()
+                        if session_key:
+                            logger.info("Successfully obtained session key")
+                            self.session_key = session_key
+                            self.cache_session(session_key)
 
-                    # Reload SSH key into agent after download
-                    self.load_ssh_key_to_agent()
+                            # Try to download main SSH key
+                            self.download_main_ssh_key()
 
-                    logger.success("Successfully logged in to Bitwarden")
-                    return True
-                else:
-                    logger.error("Failed to extract session key from login output")
-                    logger.debug(f"Login output: {login_result.stdout}")
+                            # Reload SSH key into agent after download
+                            self.load_ssh_key_to_agent()
+
+                            logger.success("Successfully logged in and unlocked Bitwarden")
+                            return True
+                        else:
+                            logger.error("Failed to get session key from unlock")
+                            return False
+                    else:
+                        logger.error("Failed to unlock vault")
+                        if unlock_result.stderr:
+                            # Never log the actual password
+                            cleaned_error = unlock_result.stderr.replace(password, "[REDACTED]") if password in unlock_result.stderr else unlock_result.stderr
+                            logger.error(f"Error details: {cleaned_error}")
+                        return False
+
+                except Exception as e:
+                    logger.error(f"Error during login: {e}")
                     return False
 
             else:
@@ -396,9 +416,11 @@ class BWCookie:
 
             return session_key
         except subprocess.CalledProcessError as e:
-            logger.error(f"Failed to unlock vault: {e}")
+            logger.error("Failed to unlock vault")
             if e.stderr:
-                logger.error(f"Error details: {e.stderr}")
+                # Clean any potential password from error message
+                cleaned_error = e.stderr.replace(password, "[REDACTED]") if password in e.stderr else e.stderr
+                logger.error(f"Error details: {cleaned_error}")
             return None
 
     def download_main_ssh_key(self):
@@ -927,32 +949,50 @@ def clear_cache(key: Optional[str] = None):
 @app.command()
 def status():
     """Check status of components."""
+    # Check for cached session and use it if available
+    if not bw.session_key:
+        cached_session = bw.get_cached_session()
+        if cached_session:
+            bw.session_key = cached_session
+
     # Check Bitwarden
     with console.status("[bold green]Checking Bitwarden...", spinner="dots"):
         try:
+            # First check general status
             result = subprocess.run(["bw", "status"], capture_output=True, text=True)
             status = json.loads(result.stdout)
             bw_status = status.get('status', 'unknown')
+
+            # If we have a session key, validate it
+            if bw.session_key and bw_status == "locked":
+                if bw.validate_session(bw.session_key):
+                    bw_status = "unlocked (cached session)"
+                else:
+                    bw_status = "locked (invalid cached session)"
+
             console.print(f"✓ Bitwarden: [green]{bw_status}[/green]")
         except:
             console.print("✗ Bitwarden: [red]not available[/red]")
 
     # Check SSH agent and key
     with console.status("[bold green]Checking SSH agent...", spinner="dots"):
-        if bw.ssh_agent_running:
+        if bw.is_ssh_agent_available():
             try:
-                result = subprocess.run(["ssh-add", "-l"], capture_output=True, text=True)
+                result = subprocess.run(["ssh-add", "-l"], capture_output=True, text=True, env=os.environ)
                 if result.returncode == 0:
-                    key_count = len([line for line in result.stdout.strip().split('\n') if line.strip()])
-                    console.print(f"✓ SSH agent: [green]running[/green] ({key_count} keys loaded)")
+                    keys = [line for line in result.stdout.strip().split('\n') if line.strip()]
+                    console.print(f"✓ SSH agent: [green]running[/green] ({len(keys)} keys loaded)")
                 elif result.returncode == 1:
                     console.print("✓ SSH agent: [yellow]running (no keys loaded)[/yellow]")
                 else:
                     console.print("✗ SSH agent: [red]not responding[/red]")
-            except:
-                console.print("✗ SSH agent: [red]error checking status[/red]")
+            except Exception as e:
+                console.print(f"✗ SSH agent: [red]error checking status: {e}[/red]")
         else:
             console.print("✗ SSH agent: [red]not running[/red]")
+            console.print("  [yellow]Hint: SSH agent runs per-session. You may need to:[/yellow]")
+            console.print("  [yellow]1. Start an agent: eval $(ssh-agent -s)[/yellow]")
+            console.print("  [yellow]2. Or use existing: export SSH_AUTH_SOCK=/path/to/socket[/yellow]")
 
     # Check SSH key
     with console.status("[bold green]Checking SSH key...", spinner="dots"):

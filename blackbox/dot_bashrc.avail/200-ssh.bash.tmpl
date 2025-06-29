@@ -1,0 +1,8 @@
+# Start SSH agent only if not already running
+if ! command -v ssh-add >/dev/null 2>&1; then
+    echo "ssh-add command not found!" >&2
+elif [ -z "$SSH_AUTH_SOCK" ] || ! ssh-add -l >/dev/null 2>&1; then
+    if [ "$(ssh-add -l 2>&1 | grep -c 'could not open')" -gt 0 ]; then
+        eval "$(ssh-agent -s)" > /dev/null
+    fi
+fi
