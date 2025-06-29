@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+# 900-epilogue.sh
+# This script is run at the end of a chezmoi apply.
+# It handles final cleanup and configuration tasks.
+#
+# Exit on error, treat unset variables as an error, and prevent errors in pipelines
+# from being masked.
+set -eo pipefail
+
+# Source the logger library if it exists
+if [[ -f "$HOME/.local/lib/logger/core.bash" ]]; then
+    # shellcheck source=/dev/null
+    . "$HOME/.local/lib/logger/core.bash"
+fi
+
+# --- Cleanup ---
+# Remove legacy ~/bin directory if it exists
+if [[ -d "$HOME/bin" ]]; then
+    logger::info "Removing legacy ~/bin directory..."
+    rm -rf "$HOME/bin"
+fi
+
+# --- Environment ---
+# Ensure Homebrew is on the PATH for the rest of the script
+if [[ -d "/home/linuxbrew/.linuxbrew/bin" ]]; then
+    export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
+fi
+
+# --- Git Configuration ---
+# Install Git LFS hooks if the command is available
+if command -v git-lfs &>/dev/null; then
+    logger::info "Installing Git LFS hooks..."
+    if git lfs install; then
+        logger::info "Git LFS hooks installed successfully."
+    else
+        logger::warn "Failed to install Git LFS hooks."
+    fi
+else
+    logger::warn "git-lfs command not found, skipping LFS hook installation."
+fi
+
+# Set the git remote URL to use SSH
+CHEZMOI_DIR="$HOME/.local/share/chezmoi"
+
+if [[ ! -d "$CHEZMOI_DIR" ]]; then
+    logger::warn "ChezMoi directory not found at \"$CHEZMOI_DIR\", skipping git remote configuration."
+elif ! pushd "$CHEZMOI_DIR" &>/dev/null; then
+    logger::error "Failed to enter ChezMoi directory: \"$CHEZMOI_DIR\"."
+else
+    # Check if inside a git repository
+    if ! git rev-parse --git-dir &>/dev/null; then
+        logger::warn "\"$CHEZMOI_DIR\" is not a git repository."
+    # Check for GITHUB_ID variable
+    elif [[ -z "${GITHUB_ID:-}" ]]; then
+        logger::warn "GITHUB_ID environment variable not set, skipping git remote configuration."
+    # Check if the 'origin' remote exists
+    elif ! git remote get-url origin &>/dev/null; then
+        logger::warn "Git remote 'origin' not found, skipping configuration."
+    else
+        current_origin="$(git remote get-url origin)"
+        expected_origin="git@github.com:${GITHUB_ID}/dotfiles.git"
+
+        if [[ "$current_origin" != "$expected_origin" ]]; then
+            logger::info "Updating git remote origin to use SSH..."
+            logger::info "  From: ${current_origin}"
+            logger::info "  To:   ${expected_origin}"
+            if git remote set-url origin "$expected_origin"; then
+                logger::info "Git remote origin updated successfully."
+            else
+                logger::error "Failed to update git remote origin."
+            fi
+        else
+            logger::info "Git remote origin is already correctly configured to use SSH."
+        fi
+    fi
+    popd &>/dev/null
+fi
+
+logger::info "Epilogue script completed."
