@@ -49,16 +49,8 @@ class BWCookie:
         self.ensure_ssh_agent()
 
     def ensure_ssh_key(self):
-        """Ensure SSH key exists or create one."""
-        if not self.ssh_key_path.exists():
-            logger.info("Creating SSH key at ~/.ssh/id_ed25519")
-            self.ssh_key_path.parent.mkdir(mode=0o700, exist_ok=True)
-            subprocess.run([
-                "ssh-keygen", "-t", "ed25519", "-f", str(self.ssh_key_path),
-                "-N", "", "-C", "bwcookie@local"
-            ], check=True)
-            self.ssh_key_path.chmod(0o600)
-            (self.ssh_key_path.with_suffix(".pub")).chmod(0o644)
+        """Ensure SSH key directory exists."""
+        self.ssh_key_path.parent.mkdir(mode=0o700, exist_ok=True)
 
     def ensure_ssh_agent(self):
         """Ensure SSH agent is running and key is loaded."""
@@ -190,6 +182,49 @@ class BWCookie:
         except Exception as e:
             logger.error(f"Unexpected error loading SSH key: {e}")
 
+    def reload_ssh_key_to_agent(self):
+        """Force reload SSH key into agent after key update."""
+        if not self.ssh_agent_running or not self.ssh_key_path.exists():
+            logger.debug("SSH agent not running or key file doesn't exist")
+            return False
+
+        # Ensure we have the SSH agent environment variables
+        if not os.environ.get("SSH_AUTH_SOCK"):
+            logger.debug("SSH_AUTH_SOCK not set, cannot communicate with SSH agent")
+            return False
+
+        try:
+            # First, remove all keys from the agent
+            logger.debug("Removing all keys from SSH agent")
+            subprocess.run([
+                "ssh-add", "-D"
+            ], capture_output=True, env=os.environ)
+
+            # Now add our updated key
+            logger.info("Adding updated SSH key to agent")
+
+            # Ensure proper permissions
+            self.ssh_key_path.chmod(0o600)
+
+            # Add the key
+            add_result = subprocess.run([
+                "ssh-add", str(self.ssh_key_path)
+            ], capture_output=True, text=True, env=os.environ)
+
+            if add_result.returncode == 0:
+                logger.success("SSH key reloaded into agent successfully")
+                return True
+            else:
+                logger.error(f"Failed to reload SSH key: {add_result.stderr.strip()}")
+                return False
+
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Failed to reload SSH key into agent: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Unexpected error reloading SSH key: {e}")
+            return False
+
     def get_cached_session(self) -> Optional[str]:
         """Get BW_SESSION from skate cache."""
         try:
@@ -232,10 +267,18 @@ class BWCookie:
         """Get SSH public key content."""
         ssh_pub_path = self.ssh_key_path.with_suffix(".pub")
         if not ssh_pub_path.exists():
+            if not self.ssh_key_path.exists():
+                logger.error("No SSH key found. Please download from Bitwarden first.")
+                raise FileNotFoundError("SSH key not found")
+
             # Generate public key from private
-            subprocess.run([
-                "ssh-keygen", "-y", "-f", str(self.ssh_key_path)
-            ], stdout=ssh_pub_path.open('w'), check=True)
+            try:
+                subprocess.run([
+                    "ssh-keygen", "-y", "-f", str(self.ssh_key_path)
+                ], stdout=ssh_pub_path.open('w'), check=True)
+            except subprocess.CalledProcessError as e:
+                logger.error(f"Failed to generate public key: {e}")
+                raise
 
         return ssh_pub_path.read_text().strip()
 
@@ -313,11 +356,10 @@ class BWCookie:
                     self.session_key = session_key
                     self.cache_session(session_key)
 
-                    # Try to download main SSH key
-                    self.download_main_ssh_key()
-
-                    # Reload SSH key into agent after download
-                    self.load_ssh_key_to_agent()
+                    # Try to download main SSH key and reload SSH agent
+                    if self.download_main_ssh_key():
+                        # Force reload SSH key into agent after download
+                        self.reload_ssh_key_to_agent()
 
                     logger.success("Successfully unlocked Bitwarden vault")
                     return True
@@ -362,11 +404,10 @@ class BWCookie:
                             self.session_key = session_key
                             self.cache_session(session_key)
 
-                            # Try to download main SSH key
-                            self.download_main_ssh_key()
-
-                            # Reload SSH key into agent after download
-                            self.load_ssh_key_to_agent()
+                            # Try to download main SSH key and reload SSH agent
+                            if self.download_main_ssh_key():
+                                # Force reload SSH key into agent after download
+                                self.reload_ssh_key_to_agent()
 
                             logger.success("Successfully logged in and unlocked Bitwarden")
                             return True
@@ -423,7 +464,7 @@ class BWCookie:
                 logger.error(f"Error details: {cleaned_error}")
             return None
 
-    def download_main_ssh_key(self):
+    def download_main_ssh_key(self) -> bool:
         """Download main SSH key from Bitwarden if available."""
         try:
             result = subprocess.run([
@@ -442,12 +483,45 @@ class BWCookie:
                     self.ssh_key_path.write_text(item["notes"])
                     self.ssh_key_path.chmod(0o600)
 
-                    # Reload the updated key into SSH agent
-                    self.load_ssh_key_to_agent()
+                    # Generate public key from private key
+                    try:
+                        pub_key_result = subprocess.run([
+                            "ssh-keygen", "-y", "-f", str(self.ssh_key_path)
+                        ], capture_output=True, text=True, check=True)
 
-                    logger.success("Updated SSH key from Bitwarden")
+                        pub_key_path = self.ssh_key_path.with_suffix(".pub")
+                        pub_key_path.write_text(pub_key_result.stdout)
+                        pub_key_path.chmod(0o644)
+
+                        logger.success("Updated SSH key and generated public key from Bitwarden")
+                    except subprocess.CalledProcessError as e:
+                        logger.error(f"Failed to generate public key: {e}")
+                        return False
+
+                    return True
+                else:
+                    logger.debug("SSH key item found but no notes field with key content")
+                    return False
+            else:
+                # Key not found in Bitwarden
+                logger.error("SSH key 'ssh.key.ed25519.main' not found in Bitwarden")
+                logger.info("Please create an SSH key item in Bitwarden with the following details:")
+                logger.info("  - Name: ssh.key.ed25519.main")
+                logger.info("  - Type: Secure Note")
+                logger.info("  - Notes: Paste your private SSH key content here")
+                logger.info("")
+                logger.info("To generate a new SSH key:")
+                logger.info("  ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519 -N ''")
+                logger.info("  cat ~/.ssh/id_ed25519  # Copy this to Bitwarden notes")
+                return False
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse Bitwarden response: {e}")
+            return False
         except Exception as e:
             logger.debug(f"Could not download main SSH key: {e}")
+            return False
+
+        return False
 
     def encrypt_value(self, value: str) -> str:
         """Encrypt a value using age with SSH public key."""
@@ -681,6 +755,11 @@ def unlock(quiet: bool = typer.Option(False, "--quiet", "-q", help="Only output 
 
         # Set the session key in the global instance for immediate use
         bw.session_key = session_key
+
+        # Try to download main SSH key and reload SSH agent
+        if bw.download_main_ssh_key():
+            # Force reload SSH key into agent after download
+            bw.reload_ssh_key_to_agent()
     else:
         if not quiet:
             logger.error("Unlock failed")
@@ -743,9 +822,13 @@ def ssh_agent(
                 logger.error("SSH agent is not running")
             raise typer.Exit(1)
 
-        bw.load_ssh_key_to_agent()
-        if not quiet:
-            logger.success("SSH key reloaded into agent")
+        if bw.reload_ssh_key_to_agent():
+            if not quiet:
+                logger.success("SSH key reloaded into agent")
+        else:
+            if not quiet:
+                logger.error("Failed to reload SSH key into agent")
+            raise typer.Exit(1)
 
     elif action == "stop":
         agent_pid = os.environ.get('SSH_AGENT_PID')
@@ -1006,6 +1089,8 @@ def status():
                 console.print("✗ SSH public key: [yellow]not found[/yellow]")
         else:
             console.print("✗ SSH key: [red]not found[/red]")
+            console.print("  [yellow]Run 'bwcookie login' to download SSH key from Bitwarden[/yellow]")
+            console.print("  [yellow]Or create 'ssh.key.ed25519.main' item in Bitwarden first[/yellow]")
 
     # Check skate
     with console.status("[bold green]Checking Skate...", spinner="dots"):
