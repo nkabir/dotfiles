@@ -76,4 +76,17 @@ else
     popd &>/dev/null
 fi
 
+# --- Software Installation ---
+# Install Google Chrome
+if command -v deb-repo-add.sh &>/dev/null; then
+    logger::info "Installing Google Chrome..."
+    if deb-repo-add.sh download https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb; then
+        logger::info "Google Chrome installed successfully."
+    else
+        logger::warn "Failed to install Google Chrome."
+    fi
+else
+    logger::warn "deb-repo-add.sh command not found, skipping Google Chrome installation."
+fi
+
 logger::info "Epilogue script completed."

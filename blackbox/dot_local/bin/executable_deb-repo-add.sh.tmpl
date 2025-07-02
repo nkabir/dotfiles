@@ -212,6 +212,23 @@ download_and_add() {
     if is_url "$package_spec"; then
         logger::info "Detected URL: $package_spec"
 
+        # Extract package info from URL
+        local filename package_name version
+        filename=$(basename "$package_spec")
+        if [[ "$filename" =~ ^([a-zA-Z0-9.-]+)_([0-9.-]+)_[a-zA-Z0-9.-]+\.deb$ ]]; then
+            package_name="${BASH_REMATCH[1]}"
+            version="${BASH_REMATCH[2]}"
+            logger::info "Extracted package info: $package_name version $version"
+
+            # Check if package already exists
+            if grep -q -E "^Package: $package_name" "${DISTS_DIR}/${REPO_CODENAME}/${REPO_COMPONENT}/binary-${REPO_ARCHITECTURE}/Packages" && \
+               grep -A1 -E "^Package: $package_name" "${DISTS_DIR}/${REPO_CODENAME}/${REPO_COMPONENT}/binary-${REPO_ARCHITECTURE}/Packages" | grep -q -E "^Version: $version"; then
+                logger::warn "Package $package_name version $version already exists in the repository. Skipping download."
+                rm -rf "$temp_dir"
+                return 0
+            fi
+        fi
+
         # Validate that it's likely a .deb file
         if [[ ! "$package_spec" =~ \.deb(\?.*)?$ ]]; then
             logger::warn "URL does not appear to point to a .deb file: $package_spec"
