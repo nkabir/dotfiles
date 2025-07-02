@@ -20,6 +20,7 @@ ChezMoi Main Configuration
 {{- $emailFree := promptStringOnce . "emailFree" "Email address hosted on free service" -}}
 {{- $emailCorp := promptStringOnce . "emailCorp" "Email address hosted on corp service" -}}
 {{- $githubId  := promptStringOnce . "githubId" "Github username" $githubIdEnv -}}
+{{- $homeRealm := promptStringOnce . "homeRealm" "Home realm git-host/project e.g. com.gitlab/myproject" -}}
 
 {{- $yadmRepo  := "secrets" -}} # Name of Git repository that contains secrets
 
@@ -82,3 +83,4 @@ User and host specific data
     isUbuntu    = {{ eq $osId "ubuntu" }} # Ubuntu flag
     isAlmaLinux = {{ eq $osId "almalinux" }} # Alma flag
     bwGigFolder = "gig.vault" # folder in Bitwarden where keys are stored
+    homeRealm   = {{ $homeRealm | quote }}
