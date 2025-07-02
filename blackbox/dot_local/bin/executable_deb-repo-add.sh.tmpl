@@ -191,7 +191,7 @@ download_file() {
     fi
 
     logger::info "Downloading from URL: $url" >&2
-    if curl -L --user-agent "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" -o "$dest_file" "$url" --progress-bar; then
+    if curl -L --max-time 300 --user-agent "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" -o "$dest_file" "$url" --progress-bar; then
         logger::info "Downloaded: $filename ($(du -h "$dest_file" | cut -f1))" >&2
         echo "$dest_file"
         return 0
@@ -213,45 +213,89 @@ download_and_add() {
 
         # Get headers to find the real filename
         local headers
-        headers=$(curl -sI "$package_spec")
+        headers=$(curl -sI --max-time 10 "$package_spec")
         local filename
-        filename=$(echo "$headers" | grep -o -E 'filename=.*' | cut -d= -f2 | tr -d '"\r')
+        filename=$(echo "$headers" | { grep -o -E 'filename=.*' || true; } | cut -d= -f2 | tr -d '"\r')
 
         if [[ -z "$filename" ]]; then
             filename=$(basename "$package_spec")
         fi
 
         # Extract package info from filename
+        local package_name=""
+        local version=""
         if [[ "$filename" =~ ^([a-zA-Z0-9.-]+)_([0-9.-]+)_[a-zA-Z0-9.-]+\.deb$ ]]; then
-            local package_name="${BASH_REMATCH[1]}"
-            local version="${BASH_REMATCH[2]}"
+            package_name="${BASH_REMATCH[1]}"
+            version="${BASH_REMATCH[2]}"
             logger::info "Extracted package info: $package_name version $version"
+        else
+            # For files that don't match the standard pattern, try to extract just the package name
+            if [[ "$filename" =~ ^([a-zA-Z0-9.-]+)_ ]]; then
+                package_name="${BASH_REMATCH[1]}"
+                logger::info "Extracted package name: $package_name (version unknown)"
+            fi
+        fi
 
-            # Check if package already exists
+        # Check if package already exists
+        if [[ -n "$package_name" ]]; then
             local package_exists=false
             local packages_file="${DISTS_DIR}/${REPO_CODENAME}/${REPO_COMPONENT}/binary-${REPO_ARCHITECTURE}/Packages"
-            if [[ -f "$packages_file" ]]; then
-                if awk -v pkg="$package_name" -v ver="$version" '
-                    BEGIN { RS = ""; FS = "\n"; found = 0 }
-                    {
-                        p = ""; v = "";
-                        for (i = 1; i <= NF; i++) {
-                            if ($i ~ /^Package: /) { p = substr($i, 9) }
-                            if ($i ~ /^Version: /) { v = substr($i, 9) }
+            if [[ -f "$packages_file" ]] && [[ -s "$packages_file" ]]; then
+                if [[ -n "$version" ]]; then
+                    # Check for exact package name and version match
+                    if awk -v pkg="$package_name" -v ver="$version" '
+                        BEGIN { RS = ""; FS = "\n"; found = 0 }
+                        {
+                            p = ""; v = "";
+                            for (i = 1; i <= NF; i++) {
+                                if ($i ~ /^Package: /) { 
+                                    p = substr($i, 10);  # Skip "Package: " (9 chars + space)
+                                    gsub(/^[ \t]+/, "", p); gsub(/[ \t]+$/, "", p);  # Trim whitespace
+                                }
+                                if ($i ~ /^Version: /) { 
+                                    v = substr($i, 10);  # Skip "Version: " (9 chars + space)
+                                    gsub(/^[ \t]+/, "", v); gsub(/[ \t]+$/, "", v);  # Trim whitespace
+                                }
+                            }
+                            if (p == pkg && v == ver) {
+                                found = 1;
+                                exit 0;
+                            }
                         }
-                        if (p == pkg && v == ver) {
-                            found = 1;
-                            exit 0;
+                        END { if (found == 0) { exit 1 } }
+                    ' "$packages_file" >/dev/null 2>&1; then
+                        package_exists=true
+                    fi
+                else
+                    # Check for package name only (for packages with non-standard version formats)
+                    if awk -v pkg="$package_name" '
+                        BEGIN { RS = ""; FS = "\n"; found = 0 }
+                        {
+                            p = "";
+                            for (i = 1; i <= NF; i++) {
+                                if ($i ~ /^Package: /) { 
+                                    p = substr($i, 10);  # Skip "Package: " (9 chars + space)
+                                    gsub(/^[ \t]+/, "", p); gsub(/[ \t]+$/, "", p);  # Trim whitespace
+                                }
+                            }
+                            if (p == pkg) {
+                                found = 1;
+                                exit 0;
+                            }
                         }
-                    }
-                    END { if (found == 0) { exit 1 } }
-                ' "$packages_file" >/dev/null 2>&1; then
-                    package_exists=true
+                        END { if (found == 0) { exit 1 } }
+                    ' "$packages_file" >/dev/null 2>&1; then
+                        package_exists=true
+                    fi
                 fi
             fi
 
             if [[ "$package_exists" == "true" ]]; then
-                logger::warn "Package $package_name version $version already exists in the repository. Skipping download."
+                if [[ -n "$version" ]]; then
+                    logger::warn "Package $package_name version $version already exists in the repository. Skipping download."
+                else
+                    logger::warn "Package $package_name already exists in the repository. Skipping download."
+                fi
                 rm -rf "$temp_dir"
                 return 0
             fi
@@ -272,7 +316,6 @@ download_and_add() {
         # Download the file
         local downloaded_file
         if downloaded_file=$(download_file "$package_spec" "$temp_dir"); then
-            logger::debug "Verifying downloaded file: $downloaded_file"
 
             # Verify it's a valid .deb file
             if parse_deb_info "$downloaded_file" >/dev/null; then
