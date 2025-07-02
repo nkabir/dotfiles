@@ -4,3 +4,11 @@
 # subfolders without a warning
 
 export GITHUB_ID="{{ .githubId }}"
+export HOME_REALM="{{ .homeRealm }}"
+
+export POLYLITH_ROOT="$HOME/realms/${HOME_REALM:?}/src/polylith"
+export POLYLITH_COOKIECUTTER="${POLYLITH_ROOT:?}/cookiecutter"
+export POLYLITH_KCL="${POLYLITH_ROOT:?}/kcl"
+export POLYLITH_BASH="${POLYLITH_ROOT:?}/bash"
+export POLYLITH_PYTHON="${POLYLITH_ROOT:?}/python"
+export POLYLITH_EMACS="${POLYLITH_ROOT:?}/emacs"

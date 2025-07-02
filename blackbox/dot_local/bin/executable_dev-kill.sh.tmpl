@@ -1,0 +1,36 @@
+#!/bin/bash
+
+# Specify the pattern to match processes
+PATTERN="$1"
+
+# Set a timeout for graceful shutdown (in seconds)
+TIMEOUT=2
+
+# Get the PID of the script itself to exclude it from killing
+SCRIPT_PID=$$
+
+# Gracefully kill processes matching the pattern, excluding the script itself
+pids=$(pgrep -f "$PATTERN" | grep -v "^$SCRIPT_PID$")
+if [ -z "$pids" ]; then
+    echo "No processes found matching pattern '$PATTERN'"
+    exit 0
+fi
+
+for pid in $pids; do
+    echo "Attempting to gracefully kill process $pid"
+    kill -TERM $pid
+done
+
+# Wait for the specified timeout
+sleep $TIMEOUT
+
+# Check if processes are still running and kill them forcibly
+remaining_pids=$(pgrep -f "$PATTERN" | grep -v "^$SCRIPT_PID$")
+if [ -n "$remaining_pids" ]; then
+    for pid in $remaining_pids; do
+        echo "Process $pid did not shut down gracefully, killing forcibly"
+        kill -KILL $pid || echo "Failed to kill process $pid"
+    done
+else
+    echo "All processes matching '$PATTERN' shut down gracefully"
+fi
