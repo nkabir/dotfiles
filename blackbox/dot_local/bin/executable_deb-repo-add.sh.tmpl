@@ -228,9 +228,29 @@ download_and_add() {
             logger::info "Extracted package info: $package_name version $version"
 
             # Check if package already exists
+            local package_exists=false
             local packages_file="${DISTS_DIR}/${REPO_CODENAME}/${REPO_COMPONENT}/binary-${REPO_ARCHITECTURE}/Packages"
-            if [[ -f "$packages_file" ]] && grep -q -E "^Package: $package_name" "$packages_file" && \
-               grep -A1 -E "^Package: $package_name" "$packages_file" | grep -q -E "^Version: $version"; then
+            if [[ -f "$packages_file" ]]; then
+                if awk -v pkg="$package_name" -v ver="$version" '
+                    BEGIN { RS = ""; FS = "\n"; found = 0 }
+                    {
+                        p = ""; v = "";
+                        for (i = 1; i <= NF; i++) {
+                            if ($i ~ /^Package: /) { p = substr($i, 9) }
+                            if ($i ~ /^Version: /) { v = substr($i, 9) }
+                        }
+                        if (p == pkg && v == ver) {
+                            found = 1;
+                            exit 0;
+                        }
+                    }
+                    END { if (found == 0) { exit 1 } }
+                ' "$packages_file" >/dev/null 2>&1; then
+                    package_exists=true
+                fi
+            fi
+
+            if [[ "$package_exists" == "true" ]]; then
                 logger::warn "Package $package_name version $version already exists in the repository. Skipping download."
                 rm -rf "$temp_dir"
                 return 0
