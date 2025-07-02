@@ -12,11 +12,10 @@ HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
 . "${HERE}/../lib/logger/core.bash"
 
 # Configuration - Use the same paths as deb-repo-init.sh
-DEB_REPO_DIR="/var/cache/apt/local-repo"
+DEB_REPO_DIR="{{ .chezmoi.homeDir }}/.local/share/debs"
 POOL_DIR="${DEB_REPO_DIR}/pool"
 DISTS_DIR="${DEB_REPO_DIR}/dists"
 CACHE_DIR="{{ env "XDG_CACHE_HOME" | default (printf "%s/.cache" .chezmoi.homeDir) }}/deb"
-USER_REPO_LINK="{{ .chezmoi.homeDir }}/.local/share/deb"
 
 REPO_CODENAME="local"
 REPO_COMPONENT="main"
@@ -82,35 +81,35 @@ update_repo_indexes() {
 
     cd "${DEB_REPO_DIR}"
 
-    # Generate Packages file (using sudo)
-    sudo dpkg-scanpackages -m "pool/${REPO_COMPONENT}" | sudo tee "dists/${REPO_CODENAME}/${REPO_COMPONENT}/binary-${REPO_ARCHITECTURE}/Packages" > /dev/null
-    sudo gzip -9c "dists/${REPO_CODENAME}/${REPO_COMPONENT}/binary-${REPO_ARCHITECTURE}/Packages" | sudo tee "dists/${REPO_CODENAME}/${REPO_COMPONENT}/binary-${REPO_ARCHITECTURE}/Packages.gz" > /dev/null
+    # Generate Packages file
+    dpkg-scanpackages -m "pool/${REPO_COMPONENT}" | tee "dists/${REPO_CODENAME}/${REPO_COMPONENT}/binary-${REPO_ARCHITECTURE}/Packages" > /dev/null
+    gzip -9c "dists/${REPO_CODENAME}/${REPO_COMPONENT}/binary-${REPO_ARCHITECTURE}/Packages" | tee "dists/${REPO_CODENAME}/${REPO_COMPONENT}/binary-${REPO_ARCHITECTURE}/Packages.gz" > /dev/null
 
     # Update Release file
     local release_file="dists/${REPO_CODENAME}/Release"
     local temp_release=$(mktemp)
 
     # Update date and preserve metadata
-    sudo sed "/^Date:/c\\Date: $(date -u '+%a, %d %b %Y %H:%M:%S UTC')" "${release_file}" | \
-    grep -v "^MD5Sum:\|^SHA1:\|^SHA256:\|^ " > "${temp_release}"
+    sed "/^Date:/c\\Date: $(date -u '+%a, %d %b %Y %H:%M:%S UTC')" "${release_file}" | \
+grep -v "^MD5Sum:|^SHA1:|^SHA256:|^ " > "${temp_release}"
 
     # Add checksums
     echo "MD5Sum:" >> "${temp_release}"
-    sudo find dists/${REPO_CODENAME} -type f ! -name "Release*" -exec md5sum {} \; | \
-        sed 's|dists/'${REPO_CODENAME}'/| |' | \
-        awk '{printf " %s %8d %s\n", $1, length($1), $2}' >> "${temp_release}"
+    find dists/${REPO_CODENAME} -type f ! -name "Release*" -exec md5sum {} \; | \
+sed 's|dists/'${REPO_CODENAME}'/| |' | \
+awk '{printf " %s %8d %s\n", $1, length($1), $2}' >> "${temp_release}"
 
     echo "SHA1:" >> "${temp_release}"
-    sudo find dists/${REPO_CODENAME} -type f ! -name "Release*" -exec sha1sum {} \; | \
-        sed 's|dists/'${REPO_CODENAME}'/| |' | \
-        awk '{printf " %s %8d %s\n", $1, length($1), $2}' >> "${temp_release}"
+    find dists/${REPO_CODENAME} -type f ! -name "Release*" -exec sha1sum {} \; | \
+sed 's|dists/'${REPO_CODENAME}'/| |' | \
+awk '{printf " %s %8d %s\n", $1, length($1), $2}' >> "${temp_release}"
 
     echo "SHA256:" >> "${temp_release}"
-    sudo find dists/${REPO_CODENAME} -type f ! -name "Release*" -exec sha256sum {} \; | \
-        sed 's|dists/'${REPO_CODENAME}'/| |' | \
-        awk '{printf " %s %8d %s\n", $1, length($1), $2}' >> "${temp_release}"
+    find dists/${REPO_CODENAME} -type f ! -name "Release*" -exec sha256sum {} \; | \
+sed 's|dists/'${REPO_CODENAME}'/| |' | \
+awk '{printf " %s %8d %s\n", $1, length($1), $2}' >> "${temp_release}"
 
-    sudo mv "${temp_release}" "${release_file}"
+    mv "${temp_release}" "${release_file}"
 
     logger::info "Repository indexes updated successfully"
 }
@@ -133,9 +132,9 @@ add_package() {
     read -r package_name version architecture <<< "$parse_result"
     logger::info "Adding package: $package_name version $version ($architecture)"
 
-    # Create package pool structure (using sudo since /var/cache/apt/local-repo requires root)
+    # Create package pool structure
     local package_dir="${POOL_DIR}/${REPO_COMPONENT}/${package_name:0:1}/${package_name}"
-    sudo mkdir -p "$package_dir"
+    mkdir -p "$package_dir"
 
     # Generate destination filename
     local filename="${package_name}_${version}_${architecture}.deb"
@@ -151,8 +150,8 @@ add_package() {
         fi
     fi
 
-    # Copy package to repository (using sudo)
-    sudo cp "$source_file" "$dest_file"
+    # Copy package to repository
+    cp "$source_file" "$dest_file"
     logger::info "Added package to: $dest_file"
 
     # Show package details
@@ -212,17 +211,26 @@ download_and_add() {
     if is_url "$package_spec"; then
         logger::info "Detected URL: $package_spec"
 
-        # Extract package info from URL
-        local filename package_name version
-        filename=$(basename "$package_spec")
+        # Get headers to find the real filename
+        local headers
+        headers=$(curl -sI "$package_spec")
+        local filename
+        filename=$(echo "$headers" | grep -o -E 'filename=.*' | cut -d= -f2 | tr -d '"\r')
+
+        if [[ -z "$filename" ]]; then
+            filename=$(basename "$package_spec")
+        fi
+
+        # Extract package info from filename
         if [[ "$filename" =~ ^([a-zA-Z0-9.-]+)_([0-9.-]+)_[a-zA-Z0-9.-]+\.deb$ ]]; then
-            package_name="${BASH_REMATCH[1]}"
-            version="${BASH_REMATCH[2]}"
+            local package_name="${BASH_REMATCH[1]}"
+            local version="${BASH_REMATCH[2]}"
             logger::info "Extracted package info: $package_name version $version"
 
             # Check if package already exists
-            if grep -q -E "^Package: $package_name" "${DISTS_DIR}/${REPO_CODENAME}/${REPO_COMPONENT}/binary-${REPO_ARCHITECTURE}/Packages" && \
-               grep -A1 -E "^Package: $package_name" "${DISTS_DIR}/${REPO_CODENAME}/${REPO_COMPONENT}/binary-${REPO_ARCHITECTURE}/Packages" | grep -q -E "^Version: $version"; then
+            local packages_file="${DISTS_DIR}/${REPO_CODENAME}/${REPO_COMPONENT}/binary-${REPO_ARCHITECTURE}/Packages"
+            if [[ -f "$packages_file" ]] && grep -q -E "^Package: $package_name" "$packages_file" && \
+               grep -A1 -E "^Package: $package_name" "$packages_file" | grep -q -E "^Version: $version"; then
                 logger::warn "Package $package_name version $version already exists in the repository. Skipping download."
                 rm -rf "$temp_dir"
                 return 0
@@ -257,7 +265,7 @@ download_and_add() {
                 logger::info "  Type: $(file -b "$downloaded_file" 2>/dev/null || echo 'unknown')"
 
                 # Check if it might be an HTML error page
-                if head -c 100 "$downloaded_file" | grep -qi "<!DOCTYPE\|<html"; then
+                if head -c 100 "$downloaded_file" | grep -qi "<!DOCTYPE|<html"; then
                     logger::error "Downloaded file appears to be an HTML page (possibly an error page)"
                     logger::debug "First few lines of downloaded file:"
                     head -5 "$downloaded_file" | sed 's/^/  /'
@@ -334,7 +342,7 @@ remove_package() {
 
     # Find package files
     local package_files
-    mapfile -t package_files < <(sudo find "${POOL_DIR}" -name "${package_name}_*.deb")
+    mapfile -t package_files < <(find "${POOL_DIR}" -name "${package_name}_*.deb")
 
     if [[ ${#package_files[@]} -eq 0 ]]; then
         logger::warn "No packages found matching: $package_name"
@@ -344,13 +352,13 @@ remove_package() {
     local removed_count=0
     for file in "${package_files[@]}"; do
         logger::info "Removing: ${file##*/}"
-        sudo rm -f "$file"
+        rm -f "$file"
         ((removed_count++))
 
         # Remove empty directories
         local dir=$(dirname "$file")
-        if [[ -d "$dir" ]] && [[ -z "$(sudo ls -A "$dir")" ]]; then
-            sudo rmdir "$dir" 2>/dev/null || true
+        if [[ -d "$dir" ]] && [[ -z "$(ls -A "$dir")" ]]; then
+            rmdir "$dir" 2>/dev/null || true
         fi
     done
 
