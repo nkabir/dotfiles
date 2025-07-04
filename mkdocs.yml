@@ -1,0 +1,115 @@
+site_name: ChezMoi Dotfiles Documentation
+site_description: Comprehensive documentation for cross-platform dotfiles management with ChezMoi
+site_url: https://docs.example.com  # Replace with your CloudFront URL
+repo_url: https://github.com/yourusername/dotfiles  # Replace with your repository URL
+repo_name: yourusername/dotfiles
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.path
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.annotation
+    - content.code.copy
+  language: en
+  font:
+    text: Roboto
+    code: Roboto Mono
+  icon:
+    logo: material/console
+
+plugins:
+  - search
+  - minify:
+      minify_html: true
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/yourusername
+  generator: false
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - meta
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.magiclink:
+      repo_url_shorthand: true
+      user: yourusername
+      repo: dotfiles
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quick-start.md
+    - Configuration: getting-started/configuration.md
+  - Architecture:
+    - Overview: architecture/overview.md
+    - Directory Structure: architecture/directory-structure.md
+    - Template System: architecture/template-system.md
+    - Library System: architecture/library-system.md
+  - Development:
+    - Bash Modules: development/bash-modules.md
+    - Package Management: development/package-management.md
+    - Realms Structure: development/realms.md
+    - Common Tasks: development/common-tasks.md
+  - Reference:
+    - Commands: reference/commands.md
+    - Templates: reference/templates.md
+    - Scripts: reference/scripts.md
+    - Environment Variables: reference/environment.md
+
+copyright: |
+  &copy; 2024 <a href="https://github.com/yourusername"  target="_blank" rel="noopener">Your Name</a>
