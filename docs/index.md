@@ -1,4 +1,4 @@
-# ChezMoi Dotfiles
+# CWIQ Seed
 
 Welcome to the documentation for this ChezMoi-managed dotfiles repository. This system provides automated development environment setup across Ubuntu and AlmaLinux distributions.
 
