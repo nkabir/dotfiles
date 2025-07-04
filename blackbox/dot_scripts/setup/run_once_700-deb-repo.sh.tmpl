@@ -16,10 +16,25 @@ mkdir -p "{{ env "XDG_CACHE_HOME" | default (printf "%s/.cache" .chezmoi.homeDir
 if command -v deb-repo-init.sh &> /dev/null; then
     echo "Initializing Debian repository structure..."
     deb-repo-init.sh init
+    
+    # Ensure repository is readable by all (needed for APT)
+    echo "Setting repository permissions..."
+    chmod -R o+rX "${HOME}/.local/share/debs/"
+    
+    # Add repository to APT sources if not already added
+    if [ ! -f "/etc/apt/sources.list.d/local-deb-repo.list" ]; then
+        echo "Adding repository to APT sources..."
+        sudo cp "${HOME}/.config/deb/local-deb-repo.list" /etc/apt/sources.list.d/ || {
+            echo "Failed to add repository to APT. You can manually add it later with:"
+            echo "  sudo cp '${HOME}/.config/deb/local-deb-repo.list' /etc/apt/sources.list.d/"
+        }
+    else
+        echo "Repository already configured in APT sources"
+    fi
 else
     echo "Warning: deb-repo-init.sh not found in PATH"
     # Fallback: create basic structure
-    DEB_REPO_DIR="{{ .chezmoi.homeDir }}/.local/share/deb"
+    DEB_REPO_DIR="{{ .chezmoi.homeDir }}/.local/share/debs"
     mkdir -p "${DEB_REPO_DIR}/pool/main"
     mkdir -p "${DEB_REPO_DIR}/dists/local/main/binary-amd64"
     touch "${DEB_REPO_DIR}/pool/main/.keep"
@@ -35,7 +50,7 @@ echo "  deb-repo-add.sh list                  # List packages"
 echo "  deb-xdg-dirs.sh                       # Show directory layout"
 echo
 echo "To use the repository, add this line to /etc/apt/sources.list.d/local.list:"
-echo "  deb [trusted=yes] file://{{ .chezmoi.homeDir }}/.local/share/deb local main"
+echo "  deb [trusted=yes] file://{{ .chezmoi.homeDir }}/.local/share/debs local main"
 {{- else }}
 echo "Debian repository setup is only for Ubuntu systems"
 {{- end }}
