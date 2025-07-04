@@ -1,36 +1,47 @@
-site_name: ChezMoi Dotfiles Documentation
-site_description: Comprehensive documentation for cross-platform dotfiles management with ChezMoi
+site_name: CWIQ Seed
+site_description: Cross-platform dotfiles management with CWIQ Seed
 site_url: https://docs.example.com  # Replace with your CloudFront URL
 repo_url: https://github.com/yourusername/dotfiles  # Replace with your repository URL
 repo_name: yourusername/dotfiles
 
 theme:
   name: material
+  font:
+    text: Work Sans                 # Modern, readable sans-serif font for body text
+    code: Anonymous Pro         # Monospace font optimized for code display
   palette:
+    # Light mode theme
     - scheme: default
-      primary: indigo
-      accent: indigo
+      primary: blue             # Primary color for headers, links, and UI elements
+      accent: blue              # Accent color for interactive elements
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
+    # Dark mode theme
     - scheme: slate
-      primary: indigo
-      accent: indigo
+      primary: purple           # Primary color for dark mode
+      accent: orange            # Accent color for dark mode
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
+
+
   features:
-    - navigation.tabs
-    - navigation.tabs.sticky
-    - navigation.sections
-    - navigation.expand
-    - navigation.path
-    - navigation.top
-    - search.suggest
-    - search.highlight
-    - content.tabs.link
-    - content.code.annotation
-    - content.code.copy
+    - navigation.sections       # Group navigation items into collapsible sections
+    - navigation.top            # Add "Back to top" button
+    - navigation.indexes        # Enable section index pages
+    - navigation.instant        # Fast page loading with XHR
+    - navigation.tracking       # Update URL with current heading anchor
+    - navigation.footer         # Add previous/next navigation in footer
+    - navigation.path           # Show breadcrumb navigation path
+    - content.code.copy         # Add copy buttons to code blocks
+    - content.code.annotate     # Enable code annotations with numbers
+    - content.tooltips          # Show tooltips for abbreviations and links
+    - content.tabs.link         # Link tabbed content across pages
+    - search.suggest            # Show search suggestions while typing
+    - search.highlight          # Highlight search terms in results
+    - search.share              # Add share button to search
+    - search.boost              # Boost search results for headings and titles
   language: en
   font:
     text: Roboto
