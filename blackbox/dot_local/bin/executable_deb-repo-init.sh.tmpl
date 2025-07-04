@@ -86,6 +86,9 @@ Components: ${REPO_COMPONENT}
 Description: ${REPO_DESCRIPTION}
 EOF
 
+    # Ensure Release file has proper permissions
+    chmod 644 "${conf_file}" 2>/dev/null || true
+
     logger::info "Created Release file at ${conf_file}"
 }
 
@@ -184,8 +187,11 @@ create_keep_files() {
 
 # Function to set permissions
 set_permissions() {
-    # No-op, user owns all files
-    :
+    # Ensure parent directories are traversable by others (needed for APT)
+    chmod o+x "${HOME}/.local" "${HOME}/.local/share" 2>/dev/null || true
+    
+    # Make repository readable by all (needed for APT's _apt user)
+    chmod -R o+rX "${DEB_REPO_DIR}/" 2>/dev/null || true
 }
 
 # Function to update package indexes
@@ -344,6 +350,7 @@ main() {
             ;;
         "update")
             update_indexes
+            set_permissions
             ;;
         "status")
             show_status

@@ -83,6 +83,9 @@ if command -v deb-repo-add.sh &>/dev/null; then
     # Use timeout to prevent hanging
     if timeout 120 bash -c 'echo "y" | deb-repo-add.sh download "https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb"'; then
         logger::info "Google Chrome installed successfully."
+        # Ensure repository permissions are correct after any updates
+        chmod o+x "${HOME}/.local" "${HOME}/.local/share" 2>/dev/null || true
+        chmod -R o+rX "${HOME}/.local/share/debs/" 2>/dev/null || true
     else
         logger::warn "Failed to install Google Chrome."
     fi

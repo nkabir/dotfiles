@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# run_once_250-emoji-fonts.sh - Setup emoji font rendering
+# ::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+set -euo pipefail
+
+echo "Setting up emoji font rendering..."
+
+# Rebuild font cache to ensure new emoji fonts are recognized
+echo "Rebuilding font cache..."
+fc-cache -fv >/dev/null 2>&1 || {
+    echo "Warning: Failed to rebuild font cache"
+}
+
+# Test emoji rendering
+echo "Testing emoji rendering: 😀 🎉 🚀 ❤️ 👍 🔥"
+echo "If you don't see emojis above, restart your terminal emulator."
+
+echo "Emoji font setup complete!"

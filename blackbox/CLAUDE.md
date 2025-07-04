@@ -114,3 +114,11 @@ chezmoi apply
 - Scripts in `dot_scripts/` are development utilities, not chezmoi scripts
 - The `common/` directory contains shared Python utilities for system detection
 - Local modifications should be made through chezmoi, not directly to deployed files
+
+### Terminal and Font Configuration
+
+- **Emoji Support**: The setup installs Noto Color Emoji fonts on both Ubuntu and AlmaLinux
+  - Ubuntu: `fonts-noto-color-emoji` and `fonts-noto-mono`
+  - AlmaLinux: `google-noto-color-emoji-fonts` and `google-noto-mono-fonts`
+  - Fontconfig is configured to prioritize emoji rendering in `~/.config/fontconfig/conf.d/01-emoji.conf`
+  - Restart terminal emulators after installation for emoji support

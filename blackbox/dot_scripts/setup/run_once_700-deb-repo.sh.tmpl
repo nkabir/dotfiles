@@ -17,8 +17,9 @@ if command -v deb-repo-init.sh &> /dev/null; then
     echo "Initializing Debian repository structure..."
     deb-repo-init.sh init
     
-    # Ensure repository is readable by all (needed for APT)
+    # Ensure repository and parent directories are accessible by APT
     echo "Setting repository permissions..."
+    chmod o+x "${HOME}/.local" "${HOME}/.local/share"
     chmod -R o+rX "${HOME}/.local/share/debs/"
     
     # Add repository to APT sources if not already added

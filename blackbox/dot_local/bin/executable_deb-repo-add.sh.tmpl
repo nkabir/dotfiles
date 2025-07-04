@@ -110,6 +110,13 @@ sed 's|dists/'${REPO_CODENAME}'/| |' | \
 awk '{printf " %s %8d %s\n", $1, length($1), $2}' >> "${temp_release}"
 
     mv "${temp_release}" "${release_file}"
+    
+    # Ensure the Release file is readable
+    chmod 644 "${release_file}" 2>/dev/null || true
+
+    # Fix permissions for APT access
+    chmod o+x "${HOME}/.local" "${HOME}/.local/share" 2>/dev/null || true
+    chmod -R o+rX "${DEB_REPO_DIR}/" 2>/dev/null || true
 
     logger::info "Repository indexes updated successfully"
 }

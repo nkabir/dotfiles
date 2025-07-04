@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# run_after_999-fix-repo-permissions.sh.tmpl
+# This script ensures the local deb repository has correct permissions
+# It runs at the very end of chezmoi apply to fix any permission issues
+
+{{- if .isUbuntu }}
+# Fix repository permissions to ensure APT can access them
+if [[ -d "${HOME}/.local/share/debs" ]]; then
+    # Ensure parent directories are accessible
+    chmod o+x "${HOME}/.local" "${HOME}/.local/share" 2>/dev/null || true
+    
+    # Make all repository files readable
+    find "${HOME}/.local/share/debs" -type f -exec chmod 644 {} \; 2>/dev/null || true
+    
+    # Make all repository directories accessible
+    find "${HOME}/.local/share/debs" -type d -exec chmod 755 {} \; 2>/dev/null || true
+fi
+{{- end }}
