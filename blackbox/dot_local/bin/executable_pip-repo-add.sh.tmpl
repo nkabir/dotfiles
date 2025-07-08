@@ -106,8 +106,27 @@ update_package_index() {
 EOF
 
     # Add links for all package files
-    local package_files
-    mapfile -t package_files < <(find "${PACKAGES_DIR}" -name "${package_name}-*" -type f | sort)
+    # Handle both normalized names (with hyphens) and original names (with underscores)
+    local package_files=()
+    local search_patterns=("${package_name}-*")
+    
+    # If package name contains hyphens, also search for underscore variants
+    if [[ "$package_name" =~ - ]]; then
+        local underscore_name="${package_name//-/_}"
+        search_patterns+=("${underscore_name}-*")
+    fi
+    
+    # Find files matching any of the patterns
+    for pattern in "${search_patterns[@]}"; do
+        while IFS= read -r -d '' file; do
+            package_files+=("$file")
+        done < <(find "${PACKAGES_DIR}" -name "$pattern" -type f -print0)
+    done
+    
+    # Sort and deduplicate
+    if [[ ${#package_files[@]} -gt 0 ]]; then
+        mapfile -t package_files < <(printf '%s\n' "${package_files[@]}" | sort -u)
+    fi
 
     for file in "${package_files[@]}"; do
         local filename="${file##*/}"
@@ -271,8 +290,15 @@ list_packages() {
 
     for dir in "${package_dirs[@]}"; do
         local package_name="${dir##*/}"
-        local file_count
+        local file_count=0
+        # Count files with both hyphen and underscore variants
         file_count=$(find "${PACKAGES_DIR}" -name "${package_name}-*" -type f | wc -l)
+        if [[ "$package_name" =~ - ]]; then
+            local underscore_name="${package_name//-/_}"
+            local underscore_count
+            underscore_count=$(find "${PACKAGES_DIR}" -name "${underscore_name}-*" -type f | wc -l)
+            file_count=$((file_count + underscore_count))
+        fi
         echo "  $package_name ($file_count files)"
     done
 }
@@ -287,8 +313,17 @@ remove_package() {
 
     # Remove package files
     local removed_count=0
-    local package_files
+    local package_files=()
+    
+    # Find files with both hyphen and underscore variants
     mapfile -t package_files < <(find "${PACKAGES_DIR}" -name "${normalized_name}-*" -type f)
+    
+    if [[ "$normalized_name" =~ - ]]; then
+        local underscore_name="${normalized_name//-/_}"
+        local underscore_files
+        mapfile -t underscore_files < <(find "${PACKAGES_DIR}" -name "${underscore_name}-*" -type f)
+        package_files+=("${underscore_files[@]}")
+    fi
 
     for file in "${package_files[@]}"; do
         rm -f "$file"

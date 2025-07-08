@@ -37,6 +37,11 @@ function la() {
   fi
 }
 
+function cdh() {
+  cd $HOME_REALM
+}
+
+
 function host-runtime() {
     if [ -f /proc/cpuinfo ] && grep -q '^flags.* hypervisor' /proc/cpuinfo; then
 	echo "kernel"
@@ -63,7 +68,6 @@ export XDG_DOWNLOAD_DIR=$HOME/Downloads
 export XDG_DESKTOP_DIR=$HOME/Desktop
 
 export CDPATH=$HOME/realms:$CDPATH
-
 
 export HOST_RUNTIME=$(host-runtime)
 export EDITOR=${EDITOR:-vim}
