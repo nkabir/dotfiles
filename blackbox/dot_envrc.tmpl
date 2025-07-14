@@ -12,3 +12,6 @@ export POLYLITH_KCL="${POLYLITH_ROOT:?}/polykcl"
 export POLYLITH_BASH="${POLYLITH_ROOT:?}/polybash"
 export POLYLITH_PYTHON="${POLYLITH_ROOT:?}/polypython"
 export POLYLITH_EMACS="${POLYLITH_ROOT:?}/polyemacs"
+
+# uv searches local pip repository for packages
+export UV_EXTRA_INDEX_URL="file://${HOME}/.local/share/pip/simple"
