@@ -13,5 +13,5 @@ export POLYLITH_BASH="${POLYLITH_ROOT:?}/polybash"
 export POLYLITH_PYTHON="${POLYLITH_ROOT:?}/polypython"
 export POLYLITH_EMACS="${POLYLITH_ROOT:?}/polyemacs"
 
-# uv searches local pip repository for packages
-export UV_EXTRA_INDEX_URL="file://${HOME}/.local/share/pip/simple"
+# uv searches local pip repository for packages in space separated list
+export UV_INDEX="file://${HOME}/.local/share/pip/simple"

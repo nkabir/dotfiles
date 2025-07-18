@@ -16,7 +16,10 @@ sudo apt install -y \
      dpkg-dev \
      fonts-emojione \
      fonts-noto-color-emoji \
+     fonts-noto-core \
+     fonts-noto-extra \
      fonts-noto-mono \
+     fonts-symbola \
      libffi-dev \
      libsecret-1-0 \
      libssl-dev \
@@ -38,22 +41,29 @@ sudo dnf update -y
 sudo dnf install -y \
      ccze \
      dconf \
+     dpkg-dev \
+     gcc \
+     gcc-c++ \
      google-noto-color-emoji-fonts \
      google-noto-emoji-fonts \
+     google-noto-fonts-common \
      google-noto-mono-fonts \
-     gcc \
+     google-noto-sans-fonts \
      libffi-devel \
      libsecret \
      make \
      meld \
      openssl-devel \
-     python3-devel \
      plocate \
+     python3-devel \
+     redhat-rpm-config \
      tilix \
      unzip \
      wget \
      xclip \
      zip
+
+sudo dnf upgrade -y
 
 {{- else }}
 echo "Unknown OS, skipping package installation"
