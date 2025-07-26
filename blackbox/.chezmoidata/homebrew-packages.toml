@@ -16,6 +16,7 @@ common = [
 "age",
 "argc",
 "aws-cli",
+"aws-vault",
 "bat",
 "bitwarden-cli",
 "chezmoi",
