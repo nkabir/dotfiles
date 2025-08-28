@@ -34,3 +34,7 @@ if [ -n "$remaining_pids" ]; then
 else
     echo "All processes matching '$PATTERN' shut down gracefully"
 fi
+
+# Final check to see if any processes are still running
+echo "Final check for remaining processes matching '$PATTERN':"
+pgrep -l -f "$PATTERN"
