@@ -7,6 +7,7 @@ _BITWARDEN_CORE=1
 BITWARDEN_HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
     &> /dev/null && pwd 2> /dev/null; )";
 
+# shellcheck disable=SC1091
 . "${BITWARDEN_HERE}/../logger/core.bash"
 
 
@@ -43,14 +44,16 @@ export -f bitwarden::sync
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 # bitwarden::login
 # Usage:
-#   bitwarden::login [--email <email>] [--password <password>] [--method <method>] [--code <code>] [--apikey] [--sso]
+#   bitwarden::login [--email <email>] [--password <password>] [--passwordenv <envvar>] [--method <method>] [--code <code>] [--apikey] [--sso]
 bitwarden::login() {
     local email=""
     local password=""
+    local passwordenv=""
     local method=""
     local code=""
     local apikey=""
     local sso=""
+    local raw=""
     local args=()
 
 
@@ -62,6 +65,10 @@ bitwarden::login() {
                 ;;
             --password)
                 password="$2"
+                shift 2
+                ;;
+            --passwordenv)
+                passwordenv="$2"
                 shift 2
                 ;;
             --method)
@@ -80,10 +87,10 @@ bitwarden::login() {
                 sso="--sso"
                 shift
                 ;;
-	    --raw)
-		raw="--raw"
-		shift
-		;;
+            --raw)
+                raw="--raw"
+                shift
+                ;;
             -*)
                 logger::error "Unknown option: $1"
                 return 1
@@ -97,15 +104,29 @@ bitwarden::login() {
 
     # Build the argument list
     [[ -n "$email" ]] && args+=("$email")
-    [[ -n "$password" ]] && args+=("$password")
+    if [[ -n "$password" && -n "$passwordenv" ]]; then
+        logger::error "bitwarden::login: --password and --passwordenv are mutually exclusive"
+        return 1
+    fi
     [[ -n "$method" ]] && args+=("--method" "$method")
     [[ -n "$code" ]] && args+=("--code" "$code")
     [[ -n "$apikey" ]] && args+=("$apikey")
     [[ -n "$sso" ]] && args+=("$sso")
     [[ -n "$raw" ]] && args+=("$raw")
+    [[ -n "$passwordenv" ]] && args+=("--passwordenv" "$passwordenv")
 
 
     logger::info "Attempting Bitwarden login..."
+
+    if [[ -n "$password" ]]; then
+        if BW_PASSWORD="$password" bw login "${args[@]}" --passwordenv BW_PASSWORD; then
+            logger::info "Bitwarden login successful"
+            return 0
+        else
+            logger::error "Bitwarden login failed"
+            return 2
+        fi
+    fi
 
     if bw login "${args[@]}"; then
         logger::info "Bitwarden login successful"
@@ -140,7 +161,9 @@ bitwarden::status() {
         esac
     done
 
-    logger::info "Checking Bitwarden CLI status..."
+    if [[ $raw_output -eq 0 ]]; then
+        logger::info "Checking Bitwarden CLI status..."
+    fi
 
     local status_json
     if ! status_json="$(bw status)"; then
@@ -193,6 +216,10 @@ bitwarden::unlock() {
     done
 
 
+    if [[ -n "$password" && -n "$passwordenv" ]]; then
+        logger::error "bitwarden::unlock: --password and --passwordenv are mutually exclusive"
+        return 1
+    fi
     [[ -n "$passwordenv" ]] && args+=(--passwordenv "$passwordenv")
     [[ -n "$passwordfile" ]] && args+=(--passwordfile "$passwordfile")
     [[ $raw -eq 1 ]] && args+=(--raw)
@@ -200,7 +227,7 @@ bitwarden::unlock() {
     logger::info "Unlocking Bitwarden vault..."
 
     if [[ -n "$password" ]]; then
-        if session=$(bw unlock "${args[@]}" "$password" 2>/dev/null); then
+        if session=$(BW_PASSWORD="$password" bw unlock "${args[@]}" --passwordenv BW_PASSWORD 2>/dev/null); then
             logger::info "Bitwarden vault unlocked"
             [[ $raw -eq 1 ]] && echo "$session"
             return 0
@@ -220,6 +247,23 @@ bitwarden::unlock() {
     fi
 }
 export -f bitwarden::unlock
+
+
+# :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# bitwarden::get-folder
+# Usage:
+#   bitwarden::get-folder <name>
+bitwarden::get-folder() {
+    local name="$1"
+    if [[ -z "$name" ]]; then
+        logger::error "bitwarden::get-folder: name is required"
+        return 2
+    fi
+
+    bw list folders --search "$name" \
+        | jq -e -r --arg name "$name" '.[] | select(.name == $name)' >/dev/null
+}
+export -f bitwarden::get-folder
 
 
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::

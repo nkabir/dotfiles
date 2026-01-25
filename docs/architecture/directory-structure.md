@@ -12,6 +12,7 @@ CWIQ Seed follows a specific directory structure to organize dotfiles and script
 │   ├── dot_config/             # ~/.config directory contents
 │   ├── dot_local/              # ~/.local directory contents
 │   │   ├── bin/               # User scripts and executables
+│   │   ├── gig/               # Personal gig modules
 │   │   └── lib/               # Bash/shell libraries
 │   ├── dot_scripts/            # Chezmoi execution scripts
 │   │   ├── after/             # Post-installation scripts
@@ -39,6 +40,7 @@ After applying chezmoi, your home directory will contain:
 │   └── ...                   # Other app configs
 ├── .local/                    # User-specific data
 │   ├── bin/                  # User executables
+│   ├── gig/                  # Personal gig modules
 │   ├── lib/                  # Shell libraries
 │   ├── share/                # Application data
 │   └── state/                # Application state
@@ -76,6 +78,19 @@ Example structure:
 ├── bitwarden/
 │   └── core.bash
 └── common/
+    └── core.bash
+```
+
+### Gig Modules
+
+**`.local/gig/`**
+- Personal automation modules that compose `.local/lib` primitives
+- Organized by topic with `core.bash` entry points
+ 
+Example structure:
+```
+~/.local/gig/
+└── bitwarden/
     └── core.bash
 ```
 

@@ -8,8 +8,11 @@ GIG_BITWARDEN_HERE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" \
     &> /dev/null && pwd 2> /dev/null; )";
 
 
+# shellcheck disable=SC1091
 . "${GIG_BITWARDEN_HERE:?}/../../lib/logger/core.bash"
+# shellcheck disable=SC1091
 . "${GIG_BITWARDEN_HERE}/../../lib/bitwarden/core.bash"
+# shellcheck disable=SC1091
 . "${GIG_BITWARDEN_HERE}/../../lib/skate/core.bash"
 
 
@@ -18,10 +21,7 @@ gig::bitwarden::login() {
 
     local session
 
-    session="$(bitwarden::login --raw)"
-
-    # Check if the login was successful
-    if [[ $? -eq 0 ]]; then
+    if session="$(bitwarden::login --raw)"; then
 	logger::info "Login successful!"
 	skate::set BW_SESSION "$session"
 	return 0
@@ -54,10 +54,7 @@ gig::bitwarden::unlock() {
 
     local session
 
-    session="$(bitwarden::unlock --raw)"
-
-    # Check if the unlock was successful
-    if [[ $? -eq 0 ]]; then
+    if session="$(bitwarden::unlock --raw)"; then
 	logger::info "Unlock successful. BW_SESSION initialized."
 	skate::set BW_SESSION "$session"
 	return 0
@@ -125,10 +122,14 @@ export -f gig::bitwarden::create-folder
 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 gig::bitwarden::sync-ssh-keys() {
 
+    local ssh_keys_json
     local ssh_keys
     # get list of SSH key names from Bitwarden
-    ssh_keys=$(bitwarden::list items --search "ssh.key.ed25519" \
-        | jq -r '.[] | .name')
+    if ! ssh_keys_json="$(bitwarden::list items --search "ssh.key.ed25519")"; then
+        logger::error "Failed to list SSH keys from Bitwarden"
+        return 2
+    fi
+    ssh_keys="$(jq -r '.[] | .name' <<<"$ssh_keys_json")"
 
     if [[ -z "$ssh_keys" ]]; then
         logger::error "No SSH keys found in Bitwarden"
@@ -150,21 +151,46 @@ export -f gig::bitwarden::sync-ssh-keys
 gig::bitwarden::sync-ssh-key() {
 
     local key_name="${1:?"Key name required"}"
+    local ssh_dir="$HOME/.ssh"
+    local key_path=""
+    local tmp_file=""
+    local item_json=""
+    local private_key=""
 
+    if [[ ! "$key_name" =~ ^[A-Za-z0-9._-]+$ ]]; then
+        logger::error "Invalid SSH key name: $key_name"
+        return 2
+    fi
+    key_path="${ssh_dir}/${key_name}"
+    mkdir -p "$ssh_dir"
 
-    bitwarden::get item "$key_name" \
-        | jq -r .sshKey.privateKey > "$HOME/.ssh/$key_name"
+    if ! item_json="$(bitwarden::get item "$key_name")"; then
+        logger::error "Failed to fetch SSH key $key_name from Bitwarden"
+        return 3
+    fi
+    if ! private_key="$(jq -e -r '.sshKey.privateKey | select(type=="string" and length>0)' <<<"$item_json")"; then
+        logger::error "Missing SSH private key data for $key_name"
+        return 4
+    fi
+
+    if ! tmp_file="$(mktemp "${key_path}.XXXXXX")"; then
+        logger::error "Failed to create temp file for $key_name"
+        return 5
+    fi
+
+    printf '%s\n' "$private_key" > "$tmp_file"
+    mv -f "$tmp_file" "$key_path"
+    chmod 600 "$key_path"
 
     # if key_name ends with main, then symlink it to id_ed25519
     if [[ "$key_name" == *main ]]; then
-        ln -sf "$HOME/.ssh/$key_name" "$HOME/.ssh/id_ed25519"
+        ln -sf "$key_path" "$ssh_dir/id_ed25519"
         chmod 600 "$HOME/.ssh/id_ed25519"
-        logger::info "SSH key synced to $HOME/.ssh/$key_name"
+        logger::info "SSH key synced to $key_path"
         logger::info "SSH key synced and symlinked to id_ed25519"
     else
-        logger::info "SSH key synced to $HOME/.ssh/$key_name"
+        logger::info "SSH key synced to $key_path"
     fi
-    chmod 600 "$HOME/.ssh/$key_name"
 
     return 0
 }
